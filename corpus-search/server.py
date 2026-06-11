@@ -4,10 +4,8 @@ Provides tools to efficiently search, read, and extract data from the
 697 U.S. Treasury Bulletin files at /app/corpus/.
 """
 
-import json
 import math
 import os
-import re
 import subprocess
 from pathlib import Path
 
@@ -15,10 +13,12 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("corpus-search")
 
-CORPUS_DIR = Path("/app/corpus")
-INDEX_FILE = CORPUS_DIR / "index.txt"
+CORPUS_DIR  = Path("/app/corpus")
+INDEX_FILE  = CORPUS_DIR / "index.txt"
 ANSWER_FILE = Path("/app/answer.txt")
 
+
+# ── Corpus navigation ────────────────────────────────────────────────────────
 
 @mcp.tool()
 def list_bulletins() -> str:
@@ -34,29 +34,52 @@ def list_bulletins() -> str:
 
 
 @mcp.tool()
-def search_corpus(keyword: str, context_lines: int = 5, max_results: int = 30) -> str:
-    """Search all Treasury Bulletin files for a keyword and return matching lines with context.
+def find_bulletins_for_period(start_year: int, end_year: int) -> str:
+    """Return bulletin filenames that fall within a year range (inclusive).
 
-    Use this to find which bulletins contain specific financial data
-    (e.g., "national defense", "expenditures", "receipts").
+    Useful for narrowing down which files to search before calling
+    search_corpus or extract_tables.
 
     Args:
-        keyword: Search term (case-insensitive). Use specific phrases like
-                 "national defense" or "total expenditures".
-        context_lines: Number of lines of context to show around each match (default 5).
-        max_results: Maximum number of matches to return (default 30).
+        start_year: First year to include (e.g. 1940).
+        end_year:   Last year to include (e.g. 1955).
+    """
+    files = sorted(CORPUS_DIR.glob("treasury_bulletin_*.txt"))
+    matched = []
+    for f in files:
+        parts = f.stem.split("_")
+        if len(parts) >= 3:
+            try:
+                year = int(parts[2])
+                if start_year <= year <= end_year:
+                    matched.append(f.name)
+            except ValueError:
+                pass
+    return "\n".join(matched) if matched else f"No bulletins found for {start_year}–{end_year}"
+
+
+@mcp.tool()
+def search_corpus(keyword: str, context_lines: int = 5, max_results: int = 30) -> str:
+    """Search ALL Treasury Bulletin files for a keyword with surrounding context.
+
+    Use this first to identify which bulletins contain your target data.
+
+    Args:
+        keyword: Case-insensitive search term, e.g. 'national defense', 'net interest'.
+        context_lines: Lines of context around each match (default 5).
+        max_results: Max matches to return (default 30).
     """
     try:
         result = subprocess.run(
             ["grep", "-r", "-i", "-n", f"--context={context_lines}", keyword, str(CORPUS_DIR)],
-            capture_output=True,
-            text=True,
-            timeout=30,
+            capture_output=True, text=True, timeout=30,
         )
         lines = result.stdout.splitlines()
-        if len(lines) > max_results * (context_lines * 2 + 2):
-            lines = lines[: max_results * (context_lines * 2 + 2)]
-            lines.append(f"\n... (truncated, {len(result.stdout.splitlines())} total lines matched)")
+        cap = max_results * (context_lines * 2 + 2)
+        if len(lines) > cap:
+            total = len(lines)
+            lines = lines[:cap]
+            lines.append(f"\n... (truncated — {total} total lines matched, use a more specific keyword)")
         return "\n".join(lines) if lines else f"No matches found for '{keyword}'"
     except subprocess.TimeoutExpired:
         return "Search timed out — try a more specific keyword"
@@ -64,14 +87,14 @@ def search_corpus(keyword: str, context_lines: int = 5, max_results: int = 30) -
 
 @mcp.tool()
 def search_bulletin(filename: str, keyword: str, context_lines: int = 10) -> str:
-    """Search a single Treasury Bulletin file for a keyword with surrounding context.
+    """Search a single bulletin file for a keyword with surrounding context.
 
-    Use this to drill into a specific bulletin after identifying it with search_corpus.
+    Use after search_corpus identifies promising files.
 
     Args:
-        filename: Bulletin filename, e.g. 'treasury_bulletin_1941_01.txt'
-        keyword: Search term (case-insensitive).
-        context_lines: Lines of context around each match (default 10).
+        filename: e.g. 'treasury_bulletin_1941_01.txt'
+        keyword: Case-insensitive search term.
+        context_lines: Lines of context (default 10).
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
@@ -79,9 +102,7 @@ def search_bulletin(filename: str, keyword: str, context_lines: int = 10) -> str
     try:
         result = subprocess.run(
             ["grep", "-i", "-n", f"--context={context_lines}", keyword, str(filepath)],
-            capture_output=True,
-            text=True,
-            timeout=15,
+            capture_output=True, text=True, timeout=15,
         )
         return result.stdout if result.stdout else f"No matches for '{keyword}' in {filename}"
     except subprocess.TimeoutExpired:
@@ -90,14 +111,12 @@ def search_bulletin(filename: str, keyword: str, context_lines: int = 10) -> str
 
 @mcp.tool()
 def read_bulletin(filename: str, start_line: int = 1, end_line: int = 200) -> str:
-    """Read a section of a Treasury Bulletin file by line range.
-
-    Use this to read tables or sections in full after locating them with search tools.
+    """Read a section of a bulletin file by line range.
 
     Args:
-        filename: Bulletin filename, e.g. 'treasury_bulletin_1941_01.txt'
-        start_line: First line to read (1-indexed, default 1).
-        end_line: Last line to read (default 200). Increase for large tables.
+        filename: e.g. 'treasury_bulletin_1941_01.txt'
+        start_line: First line (1-indexed, default 1).
+        end_line: Last line (default 200). Increase for large tables.
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
@@ -105,81 +124,82 @@ def read_bulletin(filename: str, start_line: int = 1, end_line: int = 200) -> st
     lines = filepath.read_text().splitlines()
     total = len(lines)
     start = max(0, start_line - 1)
-    end = min(total, end_line)
-    selected = lines[start:end]
+    end   = min(total, end_line)
     header = f"[{filename} — lines {start+1}–{end} of {total}]\n"
-    return header + "\n".join(selected)
+    return header + "\n".join(lines[start:end])
 
 
 @mcp.tool()
 def extract_tables(filename: str, keyword: str, table_context: int = 60) -> str:
     """Extract markdown tables near a keyword match in a bulletin file.
 
-    Finds the keyword, then returns the surrounding block likely to contain
-    the full table (rows starting with '|').
+    Finds up to 3 keyword matches and returns the full surrounding block
+    (rows starting with '|').
 
     Args:
-        filename: Bulletin filename, e.g. 'treasury_bulletin_1941_01.txt'
+        filename: e.g. 'treasury_bulletin_1941_01.txt'
         keyword: Keyword to locate the table (case-insensitive).
-        table_context: Number of lines to scan around the match for table rows (default 60).
+        table_context: Lines to scan around the match (default 60).
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
         return f"File not found: {filename}"
-    lines = filepath.read_text().splitlines()
+    lines   = filepath.read_text().splitlines()
     results = []
     for i, line in enumerate(lines):
         if keyword.lower() in line.lower():
             start = max(0, i - 5)
-            end = min(len(lines), i + table_context)
-            block = lines[start:end]
-            table_lines = [
-                l for l in block if l.strip().startswith("|") or l.strip().startswith("#") or keyword.lower() in l.lower()
-            ]
-            results.append(f"[Match at line {i+1}]\n" + "\n".join(block))
+            end   = min(len(lines), i + table_context)
+            results.append(f"[Match at line {i+1}]\n" + "\n".join(lines[start:end]))
             if len(results) >= 3:
                 break
     return "\n\n---\n\n".join(results) if results else f"No matches for '{keyword}' in {filename}"
 
 
+# ── Math & statistics ────────────────────────────────────────────────────────
+
 @mcp.tool()
 def calculate(expression: str) -> str:
-    """Safely evaluate a mathematical expression and return the result.
+    """Safely evaluate a math expression. Uses conventional rounding (0.5 rounds up).
 
-    Uses conventional rounding (0.5 always rounds up), NOT Python's default
-    banker's rounding. So round(1234.5) == 1235, round(1234.5, 0) == 1235.0.
-
-    Supports: +, -, *, /, **, sqrt(), log(), sum([...]), round(), abs(), geometric_mean([...]).
+    Available functions: sum, round, abs, min, max, sqrt, log, log10, exp, pow,
+    geometric_mean, percent_change, box_cox.
 
     Args:
-        expression: A Python-safe math expression, e.g.
-                    'sum([1234.5, 678.9, 432.1])'
-                    'round((1234.5 * 678.9) ** (1/2), 2)'
-                    'geometric_mean([100, 200, 400])'
+        expression: Python-safe math expression, e.g.
+            'sum([100.0, 200.0, 300.0])'
+            'geometric_mean([500.1, 520.3, 498.7])'
+            'percent_change(old=1200.0, new=1500.0)'
+            'box_cox(value=51.5, lam=0.75)'
+            'round(1234.5678, 2)'
     """
     def geometric_mean(values):
         n = len(values)
         return math.exp(sum(math.log(v) for v in values) / n)
 
     def conventional_round(value, ndigits=0):
-        """Round using conventional half-up rule (not banker's rounding)."""
         multiplier = 10 ** ndigits
         return math.floor(value * multiplier + 0.5) / multiplier
 
+    def percent_change(old, new):
+        """Absolute percent change: abs((new - old) / old) * 100"""
+        return abs((new - old) / old) * 100
+
+    def box_cox(value, lam):
+        """Box-Cox transformation: (value^lambda - 1) / lambda, or log(value) if lambda==0."""
+        if lam == 0:
+            return math.log(value)
+        return (value ** lam - 1) / lam
+
     safe_globals = {
         "__builtins__": {},
-        "sum": sum,
-        "round": conventional_round,
-        "abs": abs,
-        "min": min,
-        "max": max,
-        "sqrt": math.sqrt,
-        "log": math.log,
-        "log10": math.log10,
-        "exp": math.exp,
-        "pow": pow,
-        "math": math,
+        "sum": sum, "round": conventional_round, "abs": abs,
+        "min": min, "max": max, "sqrt": math.sqrt,
+        "log": math.log, "log10": math.log10, "exp": math.exp,
+        "pow": pow, "math": math,
         "geometric_mean": geometric_mean,
+        "percent_change": percent_change,
+        "box_cox": box_cox,
     }
     try:
         result = eval(expression, safe_globals)
@@ -189,14 +209,44 @@ def calculate(expression: str) -> str:
 
 
 @mcp.tool()
+def linear_regression(x_values: list, y_values: list) -> str:
+    """Fit an Ordinary Least Squares (OLS) linear regression and return slope + intercept.
+
+    Returns slope and intercept rounded to 6 decimal places.
+    Use calculate() to apply additional rounding as required by the question.
+
+    Args:
+        x_values: List of predictor values (e.g. years [1929, 1930, ...]).
+        y_values: List of outcome values (e.g. receipts in billions).
+
+    Returns:
+        JSON-like string: {"slope": ..., "intercept": ...}
+    """
+    n = len(x_values)
+    if n != len(y_values) or n < 2:
+        return "Error: x_values and y_values must be equal length lists with at least 2 points"
+    x_mean = sum(x_values) / n
+    y_mean = sum(y_values) / n
+    ss_xy  = sum((x_values[i] - x_mean) * (y_values[i] - y_mean) for i in range(n))
+    ss_xx  = sum((x_values[i] - x_mean) ** 2 for i in range(n))
+    if ss_xx == 0:
+        return "Error: all x values are identical — cannot fit regression"
+    slope     = ss_xy / ss_xx
+    intercept = y_mean - slope * x_mean
+    return f'{{"slope": {round(slope, 6)}, "intercept": {round(intercept, 6)}}}'
+
+
+# ── Output ───────────────────────────────────────────────────────────────────
+
+@mcp.tool()
 def write_answer(answer: str) -> str:
     """Write the final answer to /app/answer.txt.
 
-    Call this ONCE when you are confident in your answer.
-    Write only the numerical value — no units, dollar signs, or commas.
+    Call this ONCE when fully confident. Strips dollar signs and commas automatically.
+    For multi-value answers (e.g. [slope, intercept]), pass the full bracketed string.
 
     Args:
-        answer: The final numerical answer as a string, e.g. '1234.56' or '9876'
+        answer: Final answer string, e.g. '1234.56', '[0.123, -4.567]', '12.34%'
     """
     cleaned = answer.strip().replace(",", "").replace("$", "")
     ANSWER_FILE.write_text(cleaned + "\n")
