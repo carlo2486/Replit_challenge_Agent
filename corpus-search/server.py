@@ -242,12 +242,24 @@ def linear_regression(x_values: list, y_values: list) -> str:
 def write_answer(answer: str) -> str:
     """Write the final answer to /app/answer.txt.
 
-    Call this ONCE when fully confident. Strips dollar signs and commas automatically.
-    For multi-value answers (e.g. [slope, intercept]), pass the full bracketed string.
+    IMPORTANT formatting rules:
+    - Single number:  '1234.56'          (no $, no units)
+    - Percentage:     '12.34%'           (keep the % symbol)
+    - Multi-value:    '[0.123, -4.567]'  (keep brackets AND comma between values)
+    - Two sub-answers:'[1234567, 12.34%]'(keep brackets AND comma)
+    Thousand-separator commas (e.g. 1,234,567) are stripped automatically.
 
     Args:
-        answer: Final answer string, e.g. '1234.56', '[0.123, -4.567]', '12.34%'
+        answer: Final answer string.
     """
-    cleaned = answer.strip().replace(",", "").replace("$", "")
+    import re
+    s = answer.strip()
+    if s.startswith("[") and s.endswith("]"):
+        # Strip thousand-separator commas first (digit,digit{3}), THEN split on separating commas
+        inner = re.sub(r"(?<=\d),(?=\d{3}\b)", "", s[1:-1])
+        parts = [p.strip().replace("$", "") for p in inner.split(",")]
+        cleaned = "[" + ", ".join(parts) + "]"
+    else:
+        cleaned = re.sub(r"(?<=\d),(?=\d{3}\b)", "", s).replace("$", "")
     ANSWER_FILE.write_text(cleaned + "\n")
     return f"Answer written: {cleaned}"
