@@ -146,6 +146,9 @@ def extract_tables(filename: str, keyword: str, table_context: int = 60) -> str:
 def calculate(expression: str) -> str:
     """Safely evaluate a mathematical expression and return the result.
 
+    Uses conventional rounding (0.5 always rounds up), NOT Python's default
+    banker's rounding. So round(1234.5) == 1235, round(1234.5, 0) == 1235.0.
+
     Supports: +, -, *, /, **, sqrt(), log(), sum([...]), round(), abs(), geometric_mean([...]).
 
     Args:
@@ -158,10 +161,15 @@ def calculate(expression: str) -> str:
         n = len(values)
         return math.exp(sum(math.log(v) for v in values) / n)
 
+    def conventional_round(value, ndigits=0):
+        """Round using conventional half-up rule (not banker's rounding)."""
+        multiplier = 10 ** ndigits
+        return math.floor(value * multiplier + 0.5) / multiplier
+
     safe_globals = {
         "__builtins__": {},
         "sum": sum,
-        "round": round,
+        "round": conventional_round,
         "abs": abs,
         "min": min,
         "max": max,
