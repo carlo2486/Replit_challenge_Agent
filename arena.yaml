@@ -1,0 +1,12 @@
+name: office-qa-agent
+competition: office-qa
+
+agent:
+  harness_name: "opencode"
+  model: "openrouter/deepseek/deepseek-r1:free"
+  prompt_template_path: "prompts/system.j2"
+  skills_dir: "skills/"
+  mcp_dir: "mcp/"
+
+environment:
+  timeout_per_task: 900
