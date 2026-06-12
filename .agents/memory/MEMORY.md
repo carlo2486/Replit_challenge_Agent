@@ -1,0 +1,2 @@
+- [Arena session setup](arena-session-setup.md) — everything at /home/runner/ is wiped on reboot; use workspace_start.sh to restore in one command
+- [Arena project layout](arena-project-layout.md) — project lives in /home/runner/workspace/; run from /tmp/arena-project (symlinks) to avoid git lock
