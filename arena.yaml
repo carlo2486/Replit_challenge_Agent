@@ -3,7 +3,7 @@ competition: office-qa
 
 agent:
   harness_name: "opencode"
-  model: "openrouter/deepseek/deepseek-r1:free"
+  model: "openrouter/google/gemini-2.5-pro"
   prompt_template_path: "prompts/system.j2"
   skills_dir: "skills/"
   mcp_dir: "mcp/"
