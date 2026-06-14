@@ -47,3 +47,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Arena CLI - download from PyPI or build, don't commit
+arena-cli-latest.tar.gz
+*.whl
+
+# Arena runtime artifacts
+.arena/runs/
+.arena/.update_check
+.arena/bin/
