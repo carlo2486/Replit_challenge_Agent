@@ -209,31 +209,36 @@ def calculate(expression: str) -> str:
 
 
 @mcp.tool()
-def linear_regression(x_values: list, y_values: list) -> str:
+def linear_regression(x_values: list, y_values: list, decimal_places: int = 6) -> str:
     """Fit an Ordinary Least Squares (OLS) linear regression and return slope + intercept.
-
-    Returns slope and intercept rounded to 6 decimal places.
-    Use calculate() to apply additional rounding as required by the question.
 
     Args:
         x_values: List of predictor values (e.g. years [1929, 1930, ...]).
         y_values: List of outcome values (e.g. receipts in billions).
+        decimal_places: Number of decimal places for rounding (default 6).
 
     Returns:
-        JSON-like string: {"slope": ..., "intercept": ...}
+        JSON string: {"slope": ..., "intercept": ...}
+        Use this result with calculate() to round to the required precision.
     """
     n = len(x_values)
     if n != len(y_values) or n < 2:
-        return "Error: x_values and y_values must be equal length lists with at least 2 points"
+        return f'{{"error": "x_values and y_values must be equal length lists with at least 2 points"}}'
     x_mean = sum(x_values) / n
     y_mean = sum(y_values) / n
     ss_xy  = sum((x_values[i] - x_mean) * (y_values[i] - y_mean) for i in range(n))
     ss_xx  = sum((x_values[i] - x_mean) ** 2 for i in range(n))
     if ss_xx == 0:
-        return "Error: all x values are identical — cannot fit regression"
+        return f'{{"error": "all x values are identical — cannot fit regression"}}'
     slope     = ss_xy / ss_xx
     intercept = y_mean - slope * x_mean
-    return f'{{"slope": {round(slope, 6)}, "intercept": {round(intercept, 6)}}}'
+    
+    # Use conventional rounding (0.5 rounds up), not banker's rounding
+    multiplier = 10 ** decimal_places
+    slope_rounded = math.floor(slope * multiplier + 0.5) / multiplier
+    intercept_rounded = math.floor(intercept * multiplier + 0.5) / multiplier
+    
+    return f'{{"slope": {slope_rounded}, "intercept": {intercept_rounded}}}'
 
 
 # ── Output ───────────────────────────────────────────────────────────────────
