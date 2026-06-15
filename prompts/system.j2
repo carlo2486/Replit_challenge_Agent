@@ -126,24 +126,172 @@ search_corpus() → read_bulletin() → extract_tables() → calculate() → wri
 
 ### Tool Selection by Task Type
 
-**Simple lookup (e.g., "What was net interest in 1941?")**
+---
+
+## TOOL SELECTION DECISION TREE
+
+**Question contains ANY numeric term?** → Must use `extract_tables()` or `read_bulletin()` first.
+
+**Question asks for trends/regression?** → Use `linear_regression()` after collecting data.
+
+**Question asks for calculation?** → Use `calculate()` after extracting values.
+
+---
+
+### 1. `find_bulletins_for_period(start_year, end_year)`
+
+**When to use:** FIRST step for EVERY question involving dates.
+
+**Question types:**
+- Any question with a year range → Always use first
+- Fiscal year questions → Calculate FY dates, use range
+
+**Required parameters:**
+- `start_year`: First year to search
+- `end_year`: Last year to search (use +1 for fiscal year questions)
+
+**Chain:** Must be called BEFORE `search_corpus()`
+
+---
+
+### 2. `search_corpus(keyword, context_lines=20, max_results=50)`
+
+**When to use:** Discovery after `find_bulletins_for_period()`. Never final answer.
+
+**Question types:**
+- Finding which bulletin contains relevant data
+- Locating tables by keyword
+- Initial exploration
+
+**Required parameters:**
+- `context_lines=20` (NOT default 5)
+- `max_results=50` (NOT default 30)
+
+**NEVER do:** `search_corpus()` → `write_answer()`
+
+**Chain:** Must ALWAYS be followed by `read_bulletin()` or `extract_tables()`
+
+---
+
+### 3. `search_bulletin(filename, keyword, context_lines=30)`
+
+**When to use:** After `search_corpus()` identifies the target file. For deep diving into one specific bulletin.
+
+**Question types:**
+- Finding specific data within a known file
+- Narrowing search when `search_corpus()` returned too many results
+
+**Required parameters:**
+- `context_lines=30` (NOT default 10)
+
+**Chain:** Should be followed by `read_bulletin()` or `extract_tables()`
+
+---
+
+### 4. `read_bulletin(filename, start_line, end_line=500)`
+
+**When to use:** Extracting raw text/data. After `search_corpus()` or `search_bulletin()` identifies the file.
+
+**Question types:**
+- Looking for specific values mentioned in text
+- When `extract_tables()` fails to return data
+- Reading table headers for units
+
+**Required parameters:**
+- `end_line=500` minimum (NOT default 200)
+- Increase if bulletin is longer than expected
+
+**Chain:** Extract values → `calculate()` → `write_answer()`
+
+---
+
+### 5. `extract_tables(filename, keyword, table_context=100)`
+
+**When to use:** CRITICAL for any question involving numbers, totals, or structured data.
+
+**Question types:**
+- Sum of values → Extract table → `calculate("sum([...])")`
+- Percent change → Extract table → `calculate("percent_change(...)")`
+- Geometric mean → Extract table → `calculate("geometric_mean([...])")`
+- Individual monthly values → Extract table → `extract_column_values("individual")`
+
+**Required parameters:**
+- `table_context=100` (NOT default 60)
+
+**IMPORTANT:** Tables have TWO columns — "individual" and "cumulative". Use `extract_column_values()` to select correct column.
+
+**Chain:** Extract table → `extract_column_values()` → `calculate()` → `write_answer()`
+
+---
+
+### 6. `calculate(expression)`
+
+**When to use:** EVERY arithmetic operation. NEVER do mental math.
+
+**Available functions:**
+- `sum([v1, v2, ...])` — Sum values
+- `round(value, ndigits)` — Round (uses conventional 0.5→up)
+- `geometric_mean([...])` — Geometric mean
+- `percent_change(old=X, new=Y)` — Percent change (absolute)
+- `box_cox(value, lam)` — Box-Cox transformation
+- `abs`, `min`, `max`, `sqrt`, `log`, `log10`, `exp`, `pow`
+
+**Question types:**
+- All calculation questions
+
+**Chain:** `calculate()` → `write_answer()`
+
+---
+
+### 7. `linear_regression(x_values, y_values, decimal_places=6)`
+
+**When to use:** Trend analysis. After collecting all data points.
+
+**Question types:**
+- "Fit an OLS regression"
+- "Slope of trend"
+- "Predict value based on year"
+
+**Required parameters:**
+- Two equal-length lists (years, values)
+- `decimal_places=6` for precision
+
+**IMPORTANT:** Returns JSON string. Parse and round with `calculate()`.
+
+**Chain:** Collect data → `linear_regression()` → `calculate()` → `write_answer()`
+
+---
+
+### OPTIMAL TOOL CHAINS BY QUESTION TYPE
+
+**Lookup (single value):**
 ```
-find_bulletins_for_period(1940, 1942) → search_corpus("net interest") → read_bulletin() → write_answer()
+find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()
 ```
 
-**Tabular data (e.g., "Sum of monthly expenditures for 1941")**
+**Sum/Total:**
 ```
-find_bulletins_for_period(1940, 1942) → search_corpus("expenditures") → extract_tables() → calculate("sum([...])") → write_answer()
-```
-
-**Regression (e.g., "OLS slope for receipts 1929-1942")**
-```
-find_bulletins_for_period(1929, 1942) → search_corpus("receipts") → read_bulletin() → linear_regression() → write_answer()
+find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("sum([...])") → write_answer()
 ```
 
-**Multi-file search (e.g., "Cross-reference data across years")**
+**Percent Change:**
 ```
-find_bulletins_for_period(Y1, Y2) → search_corpus() → extract_tables() in multiple files → combine results
+find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("percent_change(...)") → write_answer()
+```
+
+**Geometric Mean:**
+```
+find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("round(geometric_mean([...]), 2)") → write_answer()
+```
+
+**Regression:**
+```
+find_bulletins_for_period() → search_corpus() → read_bulletin() → linear_regression() → calculate() → write_answer()
+```
+
+**Multi-Value:**
+```
+find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values() → calculate() → write_answer("[value1, value2]")
 ```
 
 ### Tool Usage Best Practices
