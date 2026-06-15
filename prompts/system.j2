@@ -107,6 +107,41 @@ search_corpus() → read_bulletin() → extract_tables() → calculate() → wri
 
 ---
 
+## MANDATORY WORKFLOWS BY QUESTION TYPE
+
+### 📊 NUMERIC QUESTIONS — ALWAYS USE calculate()
+```
+extract_tables() → extract_column_values("individual") → calculate() → write_answer()
+```
+**NEVER perform arithmetic mentally.**
+
+---
+
+### 📈 PERCENT CHANGE QUESTIONS — ALWAYS USE calculate()
+```
+extract_tables() → extract_column_values("individual") → calculate("percent_change(old=Y1, new=Y2)")
+→ write_answer("X.XX%")
+```
+**NEVER estimate. NEVER do mental math.**
+
+---
+
+### 📉 TREND QUESTIONS — ALWAYS USE linear_regression()
+```
+extract_tables() → extract_values() → linear_regression() → calculate() → write_answer()
+```
+**Collect ALL data points first, THEN run regression.**
+
+---
+
+### 💰 TREASURY QUESTIONS — ALWAYS USE find_bulletins_for_period()
+```
+find_bulletins_for_period(Y-1, Y+1) → search_bulletin() → read_bulletin() → write_answer()
+```
+**NEVER skip narrowing the search space.**
+
+---
+
 ## MCP Tools Reference
 
 ### Tool Catalog (9 tools)
