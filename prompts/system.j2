@@ -28,6 +28,12 @@ Before searching, analyze the question:
 - Run a second retrieval using alternate keywords
 - Run a third retrieval using date-specific keywords
 
+**If confidence remains < 90%:**
+- Search again with different search terms
+- Retrieve additional evidence from related tables
+- Re-check all calculations independently
+- Do NOT answer until confidence >= 90%
+
 For each retrieval:
 - Use `find_bulletins_for_period()` to narrow the search space
 - Use `search_corpus()` for broad discovery
