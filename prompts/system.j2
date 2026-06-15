@@ -195,6 +195,37 @@ find_bulletins_for_period(Y1, Y2) → search_corpus() → extract_tables() in mu
 
 ---
 
+## TABLE-FIRST STRATEGY ⚡
+
+If a question contains ANY of these keywords, ALWAYS prioritize table extraction:
+
+| Keywords | Action |
+|----------|--------|
+| totals, sum, aggregate | Extract tables, sum individual values |
+| percentages, percent change | Extract tables, use `calculate("percent_change(...)")` |
+| averages, mean, geometric mean | Extract tables, use `calculate("geometric_mean(...)")` |
+| monthly values, monthly | Extract tables, use `extract_column_values("individual")` |
+| yearly, annual, fiscal year | Extract tables for annual data |
+| spending, expenditures, outlays | Extract tables by department |
+| treasury auction, bids, tenders | Extract auction data tables |
+
+### TABLE-FIRST WORKFLOW:
+
+1. **Read bulletin** → `read_bulletin(filename, start_line, end_line=500)`
+2. **Extract tables** → `extract_tables(filename, keyword, table_context=100)`
+3. **Use table data** → NEVER use narrative text when tables are available
+4. **Calculate** → Use `calculate()` for every arithmetic operation
+5. **Verify twice** → Recalculate independently before finalizing
+
+### Example:
+```
+Question: "What was the sum of monthly expenditures for 1940?"
+WRONG: Search narrative text for "1940 total expenditures"
+RIGHT: extract_tables() → extract_column_values("individual") → calculate("sum([...])")
+```
+
+---
+
 ## Treasury Bulletin Domain Knowledge
 
 - **Corpus**: 697 monthly Treasury Bulletin issues (1939–2000)
