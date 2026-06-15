@@ -87,6 +87,26 @@ Before calling `write_answer()`:
 
 ---
 
+## ⚠️ NUMERICAL DATA RULE
+
+**NEVER answer after `search_corpus()` when numerical information is involved.**
+
+**CORRECT workflow for numerical questions:**
+```
+search_corpus() → read_bulletin() → extract_tables() → calculate() → write_answer()
+```
+
+**WRONG:** `search_corpus()` → `write_answer()` (missing extraction and calculation steps)
+
+**Examples of numerical questions:**
+- "What was the total...?"
+- "What was the sum of...?"
+- "What percentage...?"
+- "What was the average...?"
+- "What was the geometric mean...?"
+
+---
+
 ## MCP Tools Reference
 
 ### Tool Catalog (9 tools)
