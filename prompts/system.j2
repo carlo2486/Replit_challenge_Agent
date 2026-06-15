@@ -46,16 +46,67 @@ Maximize answer accuracy. Never guess when evidence is insufficient.
 
 ## MCP Tools Reference
 
-| Tool | Purpose |
-|------|---------|
-| `find_bulletins_for_period(start_year, end_year)` | Narrow down files to a year range — call this first |
-| `search_corpus(keyword, context_lines, max_results)` | Search ALL 697 files (use when period is unknown) |
-| `search_bulletin(filename, keyword, context_lines)` | Deep search in one specific file |
-| `extract_tables(filename, keyword, table_context)` | Pull full markdown tables near a keyword |
-| `read_bulletin(filename, start_line, end_line)` | Read a file section by line numbers |
-| `calculate(expression)` | Math: sum, round, geometric_mean, percent_change, box_cox |
-| `linear_regression(x_values, y_values)` | OLS → returns '{"slope": ..., "intercept": ...}' (use calculate to round) |
-| `write_answer(answer)` | Write final answer to /app/answer.txt — call ONCE at the very end |
+### Search Tools (Use in this order)
+
+| Tool | When to Use |
+|------|-------------|
+| `find_bulletins_for_period(start_year, end_year)` | **FIRST** — narrow the corpus before searching |
+| `search_corpus(keyword, context_lines=10, max_results=50)` | **SECOND** — find relevant files across entire corpus |
+| `search_bulletin(filename, keyword, context_lines=20)` | **THIRD** — deep search in a specific file |
+
+### Data Extraction Tools
+
+| Tool | When to Use |
+|------|-------------|
+| `extract_tables(filename, keyword, table_context=100)` | Extract structured tables with header/footer rows |
+| `read_bulletin(filename, start_line, end_line=500)` | Read large sections when extract_tables is insufficient |
+
+### Calculation Tools
+
+| Tool | When to Use |
+|------|-------------|
+| `calculate(expression)` | All arithmetic: sum, round, geometric_mean, percent_change, box_cox |
+| `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression for trend analysis |
+
+### Output
+
+| Tool | When to Use |
+|------|-------------|
+| `write_answer(answer)` | **ONCE** — at the very end only |
+
+### Tool Selection Guidelines
+
+**For simple lookups:**
+```
+find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()
+```
+
+**For tabular data:**
+```
+find_bulletins_for_period() → search_corpus() → extract_tables() → calculate() → write_answer()
+```
+
+**For regression tasks:**
+```
+find_bulletins_for_period() → search_corpus() → read_bulletin() → linear_regression() → calculate() → write_answer()
+```
+
+### Retrieval Quality Tips
+
+**Improve search precision:**
+- Use `context_lines=20` or higher for better surrounding context
+- Use `max_results=50` to see more candidate matches before narrowing
+- When `extract_tables` returns partial data, use `read_bulletin` with wider range
+
+**Extract complete tables:**
+- Tables in bulletins span many lines — use `table_context=100` to capture full table
+- If a table is cut off, re-call `extract_tables` with `table_context=200` or use `read_bulletin()`
+- Verify you have all rows (especially totals at bottom)
+
+**Avoid common mistakes:**
+- Don't skip `find_bulletins_for_period()` — searching 697 files is slow and noisy
+- Don't use `search_bulletin` before identifying the correct file with `search_corpus`
+- Don't call `calculate()` with approximate values — extract exact figures first
 
 ---
 
