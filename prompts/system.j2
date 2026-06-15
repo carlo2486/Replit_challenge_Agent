@@ -83,67 +83,90 @@ Before calling `write_answer()`:
 
 ## MCP Tools Reference
 
-### Search Tools (Use in this order)
+### Tool Catalog (9 tools)
 
-| Tool | When to Use |
-|------|-------------|
-| `find_bulletins_for_period(start_year, end_year)` | **FIRST** — narrow the corpus before searching |
-| `search_corpus(keyword, context_lines=10, max_results=50)` | **SECOND** — find relevant files across entire corpus |
-| `search_bulletin(filename, keyword, context_lines=20)` | **THIRD** — deep search in a specific file |
+| # | Tool | Purpose | Input | Output |
+|---|------|---------|-------|--------|
+| 1 | `list_bulletins()` | List all 697 bulletin filenames | None | Filename list |
+| 2 | `find_bulletins_for_period(start_year, end_year)` | Filter by year | Two ints | Matching filenames |
+| 3 | `search_corpus(keyword, context_lines=10, max_results=50)` | Search ALL files | keyword, context | Matching lines with context |
+| 4 | `search_bulletin(filename, keyword, context_lines=20)` | Search ONE file | filename, keyword, context | Lines from that file |
+| 5 | `read_bulletin(filename, start_line, end_line=500)` | Read raw text | filename, line range | Text content |
+| 6 | `extract_tables(filename, keyword, table_context=100)` | Extract markdown tables | filename, keyword, context | Table rows (\| delimited) |
+| 7 | `calculate(expression)` | Math evaluation | Expression string | Numeric result |
+| 8 | `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression | Two lists | JSON {slope, intercept} |
+| 9 | `write_answer(answer)` | Write final answer | Answer string | Confirmation |
 
-### Data Extraction Tools
+### Tool Selection by Task Type
 
-| Tool | When to Use |
-|------|-------------|
-| `extract_tables(filename, keyword, table_context=100)` | Extract structured tables with header/footer rows |
-| `read_bulletin(filename, start_line, end_line=500)` | Read large sections when extract_tables is insufficient |
-
-### Calculation Tools
-
-| Tool | When to Use |
-|------|-------------|
-| `calculate(expression)` | All arithmetic: sum, round, geometric_mean, percent_change, box_cox |
-| `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression for trend analysis |
-
-### Output
-
-| Tool | When to Use |
-|------|-------------|
-| `write_answer(answer)` | **ONCE** — at the very end only |
-
-### Tool Selection Guidelines
-
-**For simple lookups:**
+**Simple lookup (e.g., "What was net interest in 1941?")**
 ```
-find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()
+find_bulletins_for_period(1940, 1942) → search_corpus("net interest") → read_bulletin() → write_answer()
 ```
 
-**For tabular data:**
+**Tabular data (e.g., "Sum of monthly expenditures for 1941")**
 ```
-find_bulletins_for_period() → search_corpus() → extract_tables() → calculate() → write_answer()
-```
-
-**For regression tasks:**
-```
-find_bulletins_for_period() → search_corpus() → read_bulletin() → linear_regression() → calculate() → write_answer()
+find_bulletins_for_period(1940, 1942) → search_corpus("expenditures") → extract_tables() → calculate("sum([...])") → write_answer()
 ```
 
-### Retrieval Quality Tips
+**Regression (e.g., "OLS slope for receipts 1929-1942")**
+```
+find_bulletins_for_period(1929, 1942) → search_corpus("receipts") → read_bulletin() → linear_regression() → write_answer()
+```
 
-**Improve search precision:**
-- Use `context_lines=20` or higher for better surrounding context
-- Use `max_results=50` to see more candidate matches before narrowing
-- When `extract_tables` returns partial data, use `read_bulletin` with wider range
+**Multi-file search (e.g., "Cross-reference data across years")**
+```
+find_bulletins_for_period(Y1, Y2) → search_corpus() → extract_tables() in multiple files → combine results
+```
 
-**Extract complete tables:**
-- Tables in bulletins span many lines — use `table_context=100` to capture full table
-- If a table is cut off, re-call `extract_tables` with `table_context=200` or use `read_bulletin()`
-- Verify you have all rows (especially totals at bottom)
+### Tool Usage Best Practices
 
-**Avoid common mistakes:**
-- Don't skip `find_bulletins_for_period()` — searching 697 files is slow and noisy
-- Don't use `search_bulletin` before identifying the correct file with `search_corpus`
-- Don't call `calculate()` with approximate values — extract exact figures first
+**`search_corpus` — Most Important Tool:**
+- Use `context_lines=20` (not default 5) for better context
+- Use `max_results=50` (not default 30) to see more matches
+- If results are truncated: "X total lines matched, use more specific keyword"
+- Strategy: First broad search, then narrow with `search_bulletin`
+
+**`extract_tables` — For Structured Data:**
+- Treasury data is in markdown pipe-delimited tables
+- Use `table_context=100` to capture full tables (some span 50+ rows)
+- Returns up to 3 keyword matches — if data is in 4th match, modify keyword
+- Tables include headers with units (check for "millions", "billions")
+
+**`read_bulletin` — For Deep Reading:**
+- Use when `extract_tables` returns partial or no data
+- Start with `end_line=500`, increase if needed (bulletins can be 1000+ lines)
+- After finding interesting content, re-read with tighter range for precision
+
+**`calculate` — Always Use for Math:**
+- Available: `sum`, `round`, `abs`, `min`, `max`, `sqrt`, `log`, `log10`, `exp`, `pow`
+- Custom: `geometric_mean([...])`, `percent_change(old=..., new=...)`, `box_cox(value=..., lam=...)`
+- `round()` uses conventional half-up rounding (0.5 → up), NOT Python banker's rounding
+- Example: `calculate("round(percent_change(old=1000, new=1500), 2)")` → `50.0`
+
+**`linear_regression` — For Trend Analysis:**
+- Input: Two equal-length lists (e.g., years and values)
+- Output: JSON string `{"slope": ..., "intercept": ...}`
+- Parse result and round with `calculate()`: `calculate("round(0.123456, 3)")` → `0.123`
+- For regression questions, collect ALL data points first, then call once
+
+**`write_answer` — Call Exactly Once:**
+- Answer format determines how to call this tool (see Answer Format Rules)
+- `write_answer("2273.8")` — single number
+- `write_answer("12.34%")` — percentage (include % symbol)
+- `write_answer("[0.123, −4.567]")` — multi-value with Unicode minus for negatives
+
+### Common Mistakes to Avoid
+
+| Mistake | Why It's Bad | Correct Approach |
+|---------|--------------|-----------------|
+| Skip `find_bulletins_for_period()` | Searching 697 files is slow and returns noise | Always narrow first |
+| Use `search_corpus` with default `context_lines=5` | May miss table headers/units | Use `context_lines=20` |
+| Use `extract_tables` with default `table_context=60` | Tables often 50+ rows | Use `table_context=100` |
+| Call `calculate()` multiple times with partial data | May use wrong values | Extract ALL values first |
+| Use Python's default `round()` | Uses banker's rounding (0.5 → even) | Use `calculate()` with `round()` |
+| Forget fiscal year conventions | Wrong data for pre-1977 years | Check Time Period Rules |
+| Answer after single search | Low confidence, likely wrong | Always verify with 2-3 searches |
 
 ---
 
