@@ -24,6 +24,10 @@ Before searching, analyze the question:
 2. **Second retrieval** — Try alternative terms (synonyms, abbreviations, related concepts)
 3. **Third retrieval** — Search by date or publication period if available
 
+**Confidence Check:** If confidence is below 90% after initial retrieval:
+- Run a second retrieval using alternate keywords
+- Run a third retrieval using date-specific keywords
+
 For each retrieval:
 - Use `find_bulletins_for_period()` to narrow the search space
 - Use `search_corpus()` for broad discovery
