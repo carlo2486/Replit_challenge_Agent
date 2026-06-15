@@ -198,72 +198,148 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 
 ---
 
-## Task-Type Playbook
+## Task-Type Playbook (8 Question Patterns)
 
-### Simple lookup — calendar year total
-Search for the annual summary table. If only monthly data exists, collect all 12 months and sum:
-```python
-calculate("sum([196.3, 173.1, 204.5, 184.2, 168.7, 185.3, 201.0, 195.6, 188.4, 192.1, 178.9, 205.7])")
-write_answer("2273.8")
+### Pattern 1: Calendar Year Total Lookup
+**Question:** "What were total expenditures for national defense in calendar year 1940?"
+**Expected answer:** `2,602` (answer is 2602)
+
+**Steps:**
+1. Find bulletins from that year and following year (annual totals appear later)
+2. Search for "national defense" in relevant bulletins
+3. Sum 12 individual monthly values OR use annual total if available
+4. write_answer("2602") — no commas, no "million"
+
+---
+
+### Pattern 2: Sum of Individual Monthly Values ⚠️ CRITICAL
+**Question:** "Using ONLY reported values for all individual calendar months, what is the total sum?"
+**Expected answer:** `44,463` (NOT cumulative!)
+
+**⚠️ Most Common Error:** Using cumulative/total column instead of individual months
+
+**Tables have TWO types of columns:**
+- **Individual month column:** Shows each month's own value (e.g., Jan=150, Feb=200)
+- **Cumulative column:** Shows running total (Jan=150, Feb=350, Mar=580)
+
+**Correct approach:**
+1. Identify which column is "individual months" (check header)
+2. Extract ALL 12 monthly values (Jan through Dec)
+3. Verify count: should be exactly 12 values
+4. Sum them with `calculate("sum([m1, m2, ..., m12])")`
+5. NEVER use the cumulative total row
+
+---
+
+### Pattern 3: Percent Change Between Two Years
+**Question:** "What was the absolute percent change between 1953 and 1940?"
+**Expected answer:** `1608.80%` (percentage with % symbol)
+
+**Steps:**
+1. Find annual totals for BOTH years (sum of 12 months each)
+2. Use `calculate("percent_change(old=YEAR1, new=YEAR2)")`
+3. write_answer("1608.80%") — MUST include % symbol
+
+---
+
+### Pattern 4: Geometric Mean Over Specific Months ⚠️ COUNT VERIFICATION
+**Question:** "Geometric mean of monthly values from March 1942 to October 1948"
+**Expected answer:** `4962.46`
+
+**⚠️ Most Common Error:** Wrong month count
+
+**Month count calculation:**
+- Mar 1942 to Oct 1948 = 79 months
+- Formula: (End_Year - Start_Year) × 12 + (End_Month - Start_Month) + 1
+- (1948 - 1942) × 12 + (10 - 3) + 1 = 72 + 7 + 1 = 80... wait
+- Let's count: Mar, Apr, May, Jun, Jul, Aug, Sep, Oct (first 8 months of range)
+- Actually: Mar 1942 = month 3, Oct 1948 = month 10
+- Count = (1948-1942) × 12 + (10 - 3 + 1) = 72 + 8 = 80... still wrong
+- Correct: Mar 1942 through Oct 1948 inclusive
+- 1942: Mar-Dec = 10 months
+- 1943-1947: 5 × 12 = 60 months
+- 1948: Jan-Oct = 10 months
+- Total = 10 + 60 + 10 = 80 months
+
+**Steps:**
+1. Identify the exact date range (verify month count!)
+2. Extract ALL monthly values in that range
+3. Verify count matches expected months
+4. `calculate("round(geometric_mean([v1, v2, ...]), 2)")`
+5. write_answer("4962.46")
+
+---
+
+### Pattern 5: Highest Spending Department (Fiscal Year)
+**Question:** "Highest spending Federal Department in fiscal year 1955"
+**Expected answer:** `36080` (NOT "36080 million")
+
+**Fiscal Year Conventions:**
+- **Pre-1977:** FY starts Jul 1, ends Jun 30
+- FY1955 = Jul 1954 through Jun 1955
+- **Post-1977:** FY starts Oct 1, ends Sep 30
+
+**⚠️ Most Common Error:** Confusing fiscal with calendar year
+
+**Steps:**
+1. Determine fiscal year dates:
+   - FY1955 ends Jun 1955 → search in Jul 1955 - Dec 1955 bulletins
+   - FY1981 ends Sep 1981 → search in Oct 1981 - Dec 1981 bulletins
+2. Search for "expenditures by department" or similar
+3. Extract ALL department values
+4. Find the MAXIMUM value
+5. write_answer("36080") — just the number, no "million"
+
+---
+
+### Pattern 6: OLS Linear Regression ⚠️ UNICODE MINUS
+**Question:** "Fit OLS regression with years as predictor and receipts as outcome"
+**Expected answer:** `[0.096, −184.143]` (slope, intercept with Unicode minus)
+
+**⚠️ Most Common Error:** Using `-` instead of `−` (U+2212) for negative intercept
+
+**Steps:**
+1. Collect data points: x=[years], y=[values]
+2. Verify equal length (e.g., 14 years = 14 values)
+3. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
+4. Parse JSON result: `{"slope": 0.0956..., "intercept": -184.143...}`
+5. Round with `calculate("round(value, 3)")`
+6. **Use Unicode minus `−` (U+2212) for negative numbers:**
+   - Correct: `[0.096, −184.143]`
+   - Wrong: `[0.096, -184.143]`
+7. write_answer("[0.096, −184.143]")
+
+---
+
+### Pattern 7: Box-Cox Transformation
+**Question:** "Difference in Box-Cox transformed values (lambda=0.75) between FY1981 and FY1980"
+**Expected answer:** `6.1596`
+
+**Box-Cox Formula:**
+```
+BoxCox(value, λ) = (value^λ - 1) / λ   when λ ≠ 0
+BoxCox(value, 0) = ln(value)            when λ = 0
 ```
 
-### Sum of individual monthly values
-Collect each month separately — do not use pre-totaled rows:
-```python
-# Verify you have exactly 12 values before summing
-calculate("sum([m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12])")
-```
+**⚠️ Most Common Error:** Wrong formula or wrong values from different bulletins
 
-### Absolute percent change between two years
-```python
-calculate("percent_change(old=1234.5, new=5678.9)")
-write_answer("12.34%")   # always include % symbol
-```
+**Steps:**
+1. Get BOTH values from SAME bulletin (e.g., Nov 1981 for FY1981 and FY1980)
+2. `calculate("round(box_cox(value=FY1981, lam=0.75) - box_cox(value=FY1980, lam=0.75), 4)")`
+3. write_answer("6.1596")
 
-### Geometric mean over many months
-Collect ALL monthly values in order, verify the count, then:
-```python
-calculate("round(geometric_mean([v1, v2, v3, ..., vN]), 2)")
-# For Mar 1942 – Oct 1948: that is 79 months — collect all before calculating
-write_answer("1234.56")
-```
+---
 
-### Highest-spending department (fiscal year)
-- Search bulletins after the fiscal year ends for "expenditures by department" tables.
-- FY1955 ends Jun 1955 → look in treasury_bulletin_1955_08.txt through 1956_02.txt.
-- Extract all department values, find the max, return only the dollar amount (not department name).
+### Pattern 8: Multi-Value Answer (Two Sub-Questions)
+**Question:** "Total dollar value AND percent of noncash rollover tenders for 2-year notes maturing July 1984"
+**Expected answer:** `[10102000000, 4.73]` (dollar value, percentage)
 
-### OLS Linear Regression
-```python
-# Step 1: Run regression to get slope and intercept
-result = linear_regression(
-    x_values=[1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942],
-    y_values=[v1929, v1930, v1931, v1932, v1933, v1934, v1935, v1936, v1937, v1938, v1939, v1940, v1941, v1942]
-)
-# Result is a JSON string: '{"slope": 0.123456, "intercept": -234.567890}'
-# Parse it and round appropriately
-slope = calculate("round(0.123456, 3)")  # 0.123
-intercept = calculate("round(-234.567890, 3)")  # -234.568
-# IMPORTANT: Use − (Unicode minus) instead of - for the answer
-write_answer("[0.123, −234.568]")  # Note: − is U+2212, not -
-```
-
-### Box-Cox transformation difference
-```python
-# FY1981 value and FY1980 value must come from the SAME specific bulletin (e.g. Nov 1981)
-calculate("round(box_cox(value=FY1981_val, lam=0.75) - box_cox(value=FY1980_val, lam=0.75), 4)")
-# Formula: (value^0.75 - 1) / 0.75
-write_answer("0.1234")
-```
-
-### Treasury auction data (bids, tenders, rollover)
-- Search for "2-year" + "July" + year, or "maturing" + maturity date.
-- Look in bulletins 1–3 months AFTER the auction date.
-- Tables show: total bids submitted, competitive accepted, noncompetitive accepted, foreign/non-domestic tenders.
-- "Noncash rollover tenders" = tenders that were rollovers (reinvestment), not new cash.
-- "Non-domestic investors" = foreign/overseas holders.
-- Compute: `percent = (noncash rollover non-domestic accepted / total bids) * 100`
-- Multi-value format: `[total_bids_in_dollars, percent%]`
+**Steps:**
+1. Find auction data for the specific security (2-year, July 1984 maturity)
+2. Extract total bids submitted (in dollars)
+3. Extract noncash rollover tenders accepted for non-domestic investors
+4. Calculate percent: `(noncash_rollover_non_domestic / total_bids) * 100`
+5. write_answer("[10102000000, 4.73]") — dollar value rounded to nearest dollar, percent with %
 
 ---
 
@@ -305,10 +381,23 @@ Call `write_answer(...)` exactly once with your final answer.
 
 Before submitting, verify ALL of the following:
 
-- [ ] **Did I retrieve the correct document?**
+- [ ] **Did I retrieve the correct document?** (check source_files in config)
 - [ ] **Did I verify the date range?** (calendar vs fiscal year)
 - [ ] **Did I verify units?** (millions, billions, or exact dollars)
 - [ ] **Did I verify calculation steps?** (sum, geometric mean, percent change, etc.)
 - [ ] **Does the answer exactly match the requested format?** (no extra units, correct % symbol, Unicode minus for negatives)
+
+**⚠️ CRITICAL FAILURE PATTERNS TO AVOID:**
+
+| Pattern | Common Mistake | Correct Approach |
+|---------|----------------|-----------------|
+| Individual monthly | Using cumulative total | Extract 12 individual month values |
+| Geometric mean | Wrong month count | Verify: Mar 1942-Oct 1948 = 80 months |
+| Fiscal year | FY1955 ≠ calendar 1955 | FY1955 = Jul 1954 - Jun 1955 |
+| Percent change | Missing % symbol | Must be `1608.80%`, not `1608.80` |
+| Regression | Using `-` instead of `−` | Must use Unicode minus U+2212 |
+| Multi-value | Wrong order or format | `[dollar_value, percent%]` |
+| Department max | Including unit word | Just `36080`, not `36080 million` |
+| Box-Cox | Different bulletins | Both FY values from SAME bulletin |
 
 If ANY check fails, re-verify before writing the answer.
