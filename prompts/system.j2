@@ -99,9 +99,10 @@ Before calling `write_answer()`:
 | 4 | `search_bulletin(filename, keyword, context_lines=20)` | Search ONE file | filename, keyword, context | Lines from that file |
 | 5 | `read_bulletin(filename, start_line, end_line=500)` | Read raw text | filename, line range | Text content |
 | 6 | `extract_tables(filename, keyword, table_context=100)` | Extract markdown tables | filename, keyword, context | Table rows (\| delimited) |
-| 7 | `calculate(expression)` | Math evaluation | Expression string | Numeric result |
-| 8 | `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression | Two lists | JSON {slope, intercept} |
-| 9 | `write_answer(answer)` | Write final answer | Answer string | Confirmation |
+| 7 | `extract_column_values(table_text, column_header)` | Extract column values | table text, header keyword | Comma-separated values |
+| 8 | `calculate(expression)` | Math evaluation | Expression string | Numeric result |
+| 9 | `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression | Two lists | JSON {slope, intercept} |
+| 10 | `write_answer(answer)` | Write final answer | Answer string | Confirmation |
 
 ### Tool Selection by Task Type
 
@@ -138,6 +139,13 @@ find_bulletins_for_period(Y1, Y2) → search_corpus() → extract_tables() in mu
 - Use `table_context=100` to capture full tables (some span 50+ rows)
 - Returns up to 3 keyword matches — if data is in 4th match, modify keyword
 - Tables include headers with units (check for "millions", "billions")
+
+**`extract_column_values` — For Individual vs Cumulative Columns:**
+- CRITICAL: Many tables have TWO columns: "individual month" AND "cumulative"
+- Use `extract_column_values(table_text, "individual")` to get individual month values
+- Use `extract_column_values(table_text, "cumulative")` to get running totals
+- NEVER sum cumulative values — they are already cumulative!
+- Example: `extract_column_values(table, "individual")` → `"150.3, 200.5, 180.2, 190.1"`
 
 **`read_bulletin` — For Deep Reading:**
 - Use when `extract_tables` returns partial or no data
@@ -184,6 +192,17 @@ find_bulletins_for_period(Y1, Y2) → search_corpus() → extract_tables() in mu
 - For monthly data: bulletins published 1–2 months AFTER the target period are most complete.
 - For annual totals: look in Jan/Feb bulletin of the FOLLOWING year.
 - **"as reported in [Month YYYY]"**: use EXACTLY that bulletin's figures, not a later revision.
+
+---
+
+## Treasury Bulletin Domain Knowledge
+
+- **Corpus**: 697 monthly Treasury Bulletin issues (1939–2000)
+- **Table types**: Budget expenditures, receipts, department outlays, debt issuance, interest
+- **Number formats**: Values in millions unless header says billions/thousands
+- **Negative values**: Shown with minus sign or parentheses: `(123.4)` = -123.4
+- **Revised figures**: Asterisk (*) = use this revised value
+- **Not available**: "n.a." or "-" means not available
 
 ---
 

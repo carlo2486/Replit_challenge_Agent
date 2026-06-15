@@ -156,6 +156,69 @@ def extract_tables(filename: str, keyword: str, table_context: int = 60) -> str:
     return "\n\n---\n\n".join(results) if results else f"No matches for '{keyword}' in {filename}"
 
 
+@mcp.tool()
+def extract_column_values(table_text: str, column_header: str) -> str:
+    """Extract values from a specific column in markdown table text.
+
+    Parses pipe-delimited table rows and returns values from the column
+    matching the header (case-insensitive partial match).
+
+    Useful for extracting individual month values vs cumulative totals.
+
+    Args:
+        table_text: Markdown table text (from extract_tables or read_bulletin).
+        column_header: Column header to match (e.g., 'individual', 'monthly', 'cumulative').
+    Returns:
+        Comma-separated values from matching column, or error message.
+    """
+    import re
+    if not table_text or not column_header:
+        return "Error: both table_text and column_header are required"
+
+    lines = table_text.strip().split('\n')
+    if len(lines) < 2:
+        return "Error: table must have at least a header row and one data row"
+
+    # Find header row (first line with |)
+    header_line = None
+    for line in lines:
+        if '|' in line:
+            header_line = line
+            break
+
+    if not header_line:
+        return "Error: no table header found"
+
+    # Parse headers
+    headers = [h.strip().lower() for h in header_line.split('|') if h.strip()]
+
+    # Find matching column
+    col_idx = None
+    for i, h in enumerate(headers):
+        if column_header.lower() in h:
+            col_idx = i
+            break
+
+    if col_idx is None:
+        return f"Error: column '{column_header}' not found. Available columns: {headers}"
+
+    # Extract values from matching column
+    values = []
+    for line in lines[1:]:  # Skip header
+        if '|' in line:
+            cells = [c.strip() for c in line.split('|') if c.strip()]
+            if col_idx < len(cells):
+                val = cells[col_idx]
+                # Skip separator lines (---)
+                if not re.match(r'^-+$', val):
+                    values.append(val)
+
+    if not values:
+        return f"Error: no values found in column '{column_header}'"
+
+    return ", ".join(values)
+
+
 # ── Math & statistics ────────────────────────────────────────────────────────
 
 @mcp.tool()
