@@ -455,19 +455,17 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 
 ### Pattern 1: Calendar Year Total Lookup
 **Question:** "What were total expenditures for national defense in calendar year 1940?"
-**Expected answer:** `2,602` (answer is 2602)
 
 **Steps:**
 1. Find bulletins from that year and following year (annual totals appear later)
 2. Search for "national defense" in relevant bulletins
 3. Sum 12 individual monthly values OR use annual total if available
-4. write_answer("2602") — no commas, no "million"
+4. write_answer(value) — no commas, no unit words
 
 ---
 
 ### Pattern 2: Sum of Individual Monthly Values ⚠️ CRITICAL
 **Question:** "Using ONLY reported values for all individual calendar months, what is the total sum?"
-**Expected answer:** `44,463` (NOT cumulative!)
 
 **⚠️ Most Common Error:** Using cumulative/total column instead of individual months
 
@@ -486,46 +484,38 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 
 ### Pattern 3: Percent Change Between Two Years
 **Question:** "What was the absolute percent change between 1953 and 1940?"
-**Expected answer:** `1608.80%` (percentage with % symbol)
 
 **Steps:**
 1. Find annual totals for BOTH years (sum of 12 months each)
 2. Use `calculate("percent_change(old=YEAR1, new=YEAR2)")`
-3. write_answer("1608.80%") — MUST include % symbol
+3. write_answer("X.XX%") — MUST include % symbol
 
 ---
 
 ### Pattern 4: Geometric Mean Over Specific Months ⚠️ COUNT VERIFICATION
 **Question:** "Geometric mean of monthly values from March 1942 to October 1948"
-**Expected answer:** `4962.46`
 
 **⚠️ Most Common Error:** Wrong month count
 
 **Month count calculation:**
-- Mar 1942 to Oct 1948 = 79 months
 - Formula: (End_Year - Start_Year) × 12 + (End_Month - Start_Month) + 1
-- (1948 - 1942) × 12 + (10 - 3) + 1 = 72 + 7 + 1 = 80... wait
-- Let's count: Mar, Apr, May, Jun, Jul, Aug, Sep, Oct (first 8 months of range)
-- Actually: Mar 1942 = month 3, Oct 1948 = month 10
-- Count = (1948-1942) × 12 + (10 - 3 + 1) = 72 + 8 = 80... still wrong
-- Correct: Mar 1942 through Oct 1948 inclusive
-- 1942: Mar-Dec = 10 months
-- 1943-1947: 5 × 12 = 60 months
-- 1948: Jan-Oct = 10 months
-- Total = 10 + 60 + 10 = 80 months
+- Example: Mar 1942 to Oct 1948
+  - 1942: Mar-Dec = 10 months
+  - 1943-1947: 5 × 12 = 60 months
+  - 1948: Jan-Oct = 10 months
+  - Total = 10 + 60 + 10 = 80 months
 
 **Steps:**
 1. Identify the exact date range (verify month count!)
 2. Extract ALL monthly values in that range
 3. Verify count matches expected months
 4. `calculate("round(geometric_mean([v1, v2, ...]), 2)")`
-5. write_answer("4962.46")
+5. write_answer("XXXX.XX")
 
 ---
 
 ### Pattern 5: Highest Spending Department (Fiscal Year)
 **Question:** "Highest spending Federal Department in fiscal year 1955"
-**Expected answer:** `36080` (NOT "36080 million")
 
 **Fiscal Year Conventions:**
 - **Pre-1977:** FY starts Jul 1, ends Jun 30
@@ -541,13 +531,12 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 2. Search for "expenditures by department" or similar
 3. Extract ALL department values
 4. Find the MAXIMUM value
-5. write_answer("36080") — just the number, no "million"
+5. write_answer(value) — just the number, no unit words
 
 ---
 
 ### Pattern 6: OLS Linear Regression ⚠️ UNICODE MINUS
 **Question:** "Fit OLS regression with years as predictor and receipts as outcome"
-**Expected answer:** `[0.096, −184.143]` (slope, intercept with Unicode minus)
 
 **⚠️ Most Common Error:** Using `-` instead of `−` (U+2212) for negative intercept
 
@@ -555,18 +544,15 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 1. Collect data points: x=[years], y=[values]
 2. Verify equal length (e.g., 14 years = 14 values)
 3. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
-4. Parse JSON result: `{"slope": 0.0956..., "intercept": -184.143...}`
+4. Parse JSON result: `{"slope": ..., "intercept": ...}`
 5. Round with `calculate("round(value, 3)")`
-6. **Use Unicode minus `−` (U+2212) for negative numbers:**
-   - Correct: `[0.096, −184.143]`
-   - Wrong: `[0.096, -184.143]`
-7. write_answer("[0.096, −184.143]")
+6. **Use Unicode minus `−` (U+2212) for negative numbers in the answer string**
+7. write_answer("[slope, −intercept]")
 
 ---
 
 ### Pattern 7: Box-Cox Transformation
 **Question:** "Difference in Box-Cox transformed values (lambda=0.75) between FY1981 and FY1980"
-**Expected answer:** `6.1596`
 
 **Box-Cox Formula:**
 ```
@@ -579,20 +565,19 @@ BoxCox(value, 0) = ln(value)            when λ = 0
 **Steps:**
 1. Get BOTH values from SAME bulletin (e.g., Nov 1981 for FY1981 and FY1980)
 2. `calculate("round(box_cox(value=FY1981, lam=0.75) - box_cox(value=FY1980, lam=0.75), 4)")`
-3. write_answer("6.1596")
+3. write_answer("X.XXXX")
 
 ---
 
 ### Pattern 8: Multi-Value Answer (Two Sub-Questions)
 **Question:** "Total dollar value AND percent of noncash rollover tenders for 2-year notes maturing July 1984"
-**Expected answer:** `[10102000000, 4.73]` (dollar value, percentage)
 
 **Steps:**
 1. Find auction data for the specific security (2-year, July 1984 maturity)
 2. Extract total bids submitted (in dollars)
 3. Extract noncash rollover tenders accepted for non-domestic investors
 4. Calculate percent: `(noncash_rollover_non_domestic / total_bids) * 100`
-5. write_answer("[10102000000, 4.73]") — dollar value rounded to nearest dollar, percent with %
+5. write_answer("[dollar_value, percent%]") — dollar value rounded to nearest dollar, percent with %
 
 ---
 
@@ -604,13 +589,13 @@ BoxCox(value, 0) = ln(value)            when λ = 0
 | Percentage | number + % | `12.34%` |
 | Slope + intercept | [s, i] with brackets + comma | `[0.123, −0.234]` |
 | Two sub-answers | [a, b] with brackets + comma | `[1234567, 12.34%]` |
-| Dollar amounts | plain number (units from question) | `36080` (for "36080 million") |
+| Dollar amounts | plain number (units from question) | `XXXXX` (no unit words) |
 
 ### Critical Formatting Rules:
 
-1. **Use Unicode minus (U+2212, −) for negative numbers in answers**: The scoring system requires `−` not `-`. Example: `[0.096, −184.143]`
+1. **Use Unicode minus (U+2212, −) for negative numbers in answers**: The scoring system requires `−` not `-`. Example: `[0.123, −0.234]`
 
-2. **"millions" format**: When the answer is "36080 million", write just `36080` (do NOT include "million" in the answer).
+2. **"millions" format**: When the answer is in millions, write just the number (do NOT include "million" in the answer).
 
 3. **Thousand-separator commas**: Are stripped automatically by `write_answer` — no need to remove them.
 
@@ -620,7 +605,7 @@ BoxCox(value, 0) = ln(value)            when λ = 0
 
 6. **Always use `calculate()` for arithmetic** — never compute in your head.
 
-7. **Dollar amounts**: If the question asks for dollars (not millions), provide the full amount. For example, if the question says "rounded to nearest nominal dollar" for a value like 10102000000, write `10102000000`.
+7. **Dollar amounts**: If the question asks for dollars (not millions), provide the full amount rounded to the nearest dollar.
 
 ---
 
@@ -645,12 +630,12 @@ Before submitting, verify ALL of the following:
 | Pattern | Common Mistake | Correct Approach |
 |---------|----------------|-----------------|
 | Individual monthly | Using cumulative total | Extract 12 individual month values |
-| Geometric mean | Wrong month count | Verify: Mar 1942-Oct 1948 = 80 months |
-| Fiscal year | FY1955 ≠ calendar 1955 | FY1955 = Jul 1954 - Jun 1955 |
-| Percent change | Missing % symbol | Must be `1608.80%`, not `1608.80` |
+| Geometric mean | Wrong month count | Verify month count formula |
+| Fiscal year | FY ≠ calendar year | Pre-1977: Jul-Jun, Post-1977: Oct-Sep |
+| Percent change | Missing % symbol | Must include `%` in answer |
 | Regression | Using `-` instead of `−` | Must use Unicode minus U+2212 |
 | Multi-value | Wrong order or format | `[dollar_value, percent%]` |
-| Department max | Including unit word | Just `36080`, not `36080 million` |
+| Department max | Including unit word | Just the number, no "million" |
 | Box-Cox | Different bulletins | Both FY values from SAME bulletin |
 
 If ANY check fails, re-verify before writing the answer.

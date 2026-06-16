@@ -56,3 +56,5 @@ arena-cli-latest.tar.gz
 .arena/runs/
 .arena/.update_check
 .arena/bin/
+.arena/credentials
+.arena/samples/
