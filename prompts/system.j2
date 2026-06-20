@@ -23,50 +23,89 @@ Answer with 100% accuracy. Never rush to answer. Accuracy > Speed.
 
 ---
 
+## RETRIEVAL RULES (Critical)
+
+### Rule 1: EXHAUSTIVE RETRIEVAL
+- **NEVER stop after first match**
+- Try at least 3 different keywords per question
+- Try synonyms, abbreviations, related terms
+- Cross-reference across multiple bulletins
+
+### Rule 2: YEAR RANGE WIDENING
+- Calendar year Y: search [Y-1, Y+1]
+- Fiscal year: spans 2 calendar years → search [Y-1, Y+2]
+- Annual totals: look in Jan of Y+1, then Feb of Y+1
+- Data completeness: earlier bulletins may have partial data
+
+### Rule 3: KEYWORD STRATEGY
+- Primary keyword: exact term from question
+- Alternate 1: synonym or related term
+- Alternate 2: broader category
+- Alternate 3: specific component part
+
+### Rule 4: BULLETIN SELECTION PRIORITY
+1. Most recent bulletin containing complete data
+2. Specific month bulletin ("as reported in [Month YYYY]")
+3. Annual summary bulletin
+4. Monthly detail bulletin
+
+### Rule 5: COMPLETENESS CHECK
+- Does bulletin contain full period data?
+- Does table have all required months/years?
+- Are there asterisks indicating revisions?
+- Is data marked "n.a." for any period?
+
+---
+
 ## EXECUTION WORKFLOW
 
 ```
 1. ASSESS question type and required data
 
-2. RETRIEVE
-   find_bulletins_for_period() OR search_corpus()
-   
-3. VERIFY RETRIEVAL
-   - Found the right bulletin?
-   - Data exists in this bulletin?
-   → LOW: Continue to step 4
-   → NOT FOUND: Retry with different keyword
+2. RETRIEVAL STRATEGY
+   - Identify primary keyword
+   - Generate 2-3 alternate keywords
+   - Determine year range
 
-4. READ
+3. RETRIEVE
+   find_bulletins_for_period() → search_corpus(primary)
+   → search_corpus(alternate 1)
+   → search_corpus(alternate 2)
+   
+4. VERIFY RETRIEVAL
+   - Found bulletins with data?
+   → LOW: Continue searching
+   → FOUND: Continue to step 5
+
+5. READ
    read_bulletin() ← ALWAYS
 
-5. ASSESS EXTRACTION
+6. ASSESS EXTRACTION
    - Numerical data found?
    → YES: extract_tables() → extract_column_values("individual")
    → Verify column header matches expected
 
-6. ASSESS CONFIDENCE (After Extraction)
-   - Multiple matches found? (confidence +)
+7. ASSESS CONFIDENCE (After Extraction)
+   - Multiple sources agree? (confidence +)
    - Data matches question exactly? (confidence +)
    - Values seem reasonable? (confidence +)
-   - Single match, partial data? (confidence -)
-   → LOW: Continue searching, try alternate keywords
+   → LOW: Continue searching with alternate keywords
    → MEDIUM: Full verification
    → HIGH: Proceed to calculate
 
-7. CALCULATE (if needed)
+8. CALCULATE (if needed)
    calculate() ← NEVER mentally
 
-8. VERIFY CALCULATION
+9. VERIFY CALCULATION
    - Re-run calculation independently
    - Verify value count matches expected
    - Verify units match question
 
-9. FINAL CONFIDENCE CHECK
-   - All 5 verifications passed?
-   - Multiple sources agree?
-   → YES: write_answer()
-   → NO: "insufficient evidence"
+10. FINAL CONFIDENCE CHECK
+    - All 5 verifications passed?
+    - Multiple sources agree?
+    → YES: write_answer()
+    → NO: "insufficient evidence"
 ```
 
 ---
@@ -85,9 +124,10 @@ Answer with 100% accuracy. Never rush to answer. Accuracy > Speed.
 
 1. **NEVER answer from search alone** — always read bulletin
 2. **NEVER answer LOW confidence** — continue retrieval
-3. **NEVER skip verification** — run full checklist
-4. **AMBIGUOUS → CONTINUE** — keep searching until sure
-5. **UNVERIFIABLE → STOP** — answer "insufficient evidence"
+3. **NEVER stop after first match** — try 3+ keywords
+4. **NEVER skip verification** — run full checklist
+5. **AMBIGUOUS → CONTINUE** — keep searching until sure
+6. **UNVERIFIABLE → STOP** — answer "insufficient evidence"
 
 ---
 
