@@ -226,19 +226,24 @@ def calculate(expression: str) -> str:
     """Safely evaluate a math expression. Uses conventional rounding (0.5 rounds up).
 
     Available functions: sum, round, abs, min, max, sqrt, log, log10, exp, pow,
-    geometric_mean, percent_change, box_cox.
+    geometric_mean, percent_change, box_cox, percent_change_signed.
 
     Args:
         expression: Python-safe math expression, e.g.
             'sum([100.0, 200.0, 300.0])'
             'geometric_mean([500.1, 520.3, 498.7])'
             'percent_change(old=1200.0, new=1500.0)'
+            'percent_change_signed(old=1200.0, new=1500.0)'
             'box_cox(value=51.5, lam=0.75)'
             'round(1234.5678, 2)'
     """
     def geometric_mean(values):
-        n = len(values)
-        return math.exp(sum(math.log(v) for v in values) / n)
+        # Filter positive values only, skip 0 and negatives
+        positive_values = [v for v in values if v > 0]
+        if not positive_values:
+            raise ValueError("geometric_mean requires at least one positive value")
+        n = len(positive_values)
+        return math.exp(sum(math.log(v) for v in positive_values) / n)
 
     def conventional_round(value, ndigits=0):
         multiplier = 10 ** ndigits
@@ -246,7 +251,15 @@ def calculate(expression: str) -> str:
 
     def percent_change(old, new):
         """Absolute percent change: abs((new - old) / old) * 100"""
+        if old == 0:
+            raise ValueError("percent_change undefined when old value is 0")
         return abs((new - old) / old) * 100
+
+    def percent_change_signed(old, new):
+        """Signed percent change: ((new - old) / old) * 100"""
+        if old == 0:
+            raise ValueError("percent_change undefined when old value is 0")
+        return ((new - old) / old) * 100
 
     def box_cox(value, lam):
         """Box-Cox transformation: (value^lambda - 1) / lambda, or log(value) if lambda==0."""
@@ -262,6 +275,7 @@ def calculate(expression: str) -> str:
         "pow": pow, "math": math,
         "geometric_mean": geometric_mean,
         "percent_change": percent_change,
+        "percent_change_signed": percent_change_signed,
         "box_cox": box_cox,
     }
     try:
@@ -284,15 +298,16 @@ def linear_regression(x_values: list, y_values: list, decimal_places: int = 6) -
         JSON string: {"slope": ..., "intercept": ...}
         Use this result with calculate() to round to the required precision.
     """
+    import json
     n = len(x_values)
     if n != len(y_values) or n < 2:
-        return f'{{"error": "x_values and y_values must be equal length lists with at least 2 points"}}'
+        return json.dumps({"error": "x_values and y_values must be equal length lists with at least 2 points"})
     x_mean = sum(x_values) / n
     y_mean = sum(y_values) / n
     ss_xy  = sum((x_values[i] - x_mean) * (y_values[i] - y_mean) for i in range(n))
     ss_xx  = sum((x_values[i] - x_mean) ** 2 for i in range(n))
     if ss_xx == 0:
-        return f'{{"error": "all x values are identical — cannot fit regression"}}'
+        return json.dumps({"error": "all x values are identical — cannot fit regression"})
     slope     = ss_xy / ss_xx
     intercept = y_mean - slope * x_mean
     
@@ -301,10 +316,30 @@ def linear_regression(x_values: list, y_values: list, decimal_places: int = 6) -
     slope_rounded = math.floor(slope * multiplier + 0.5) / multiplier
     intercept_rounded = math.floor(intercept * multiplier + 0.5) / multiplier
     
-    return f'{{"slope": {slope_rounded}, "intercept": {intercept_rounded}}}'
+    return json.dumps({"slope": slope_rounded, "intercept": intercept_rounded})
 
 
 # ── Output ───────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def parse_regression(json_str: str) -> str:
+    """Parse JSON output from linear_regression and extract slope and intercept.
+
+    Args:
+        json_str: JSON string from linear_regression output, e.g.
+            '{"slope": 0.123456, "intercept": -4.567890}'
+
+    Returns:
+        Human-readable string with slope and intercept values.
+    """
+    import json
+    try:
+        data = json.loads(json_str)
+        if "error" in data:
+            return f"Error: {data['error']}"
+        return f"slope={data['slope']}, intercept={data['intercept']}"
+    except Exception as e:
+        return f"Error parsing JSON: {e}"
 
 @mcp.tool()
 def write_answer(answer: str) -> str:

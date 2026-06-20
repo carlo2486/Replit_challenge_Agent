@@ -125,10 +125,11 @@ STEP 8: ANSWER
 - **Rounding:** sum=1, percent=2, geom_mean=2, slope=3, intercept=3, box_cox=4
 
 ### EDGE CASES
-- geometric_mean → positive values only
+- geometric_mean → positive values only (skips 0 and negatives)
 - percent_change → if old=0 → insufficient evidence
+- percent_change_signed → signed version with direction
 - sum → if all values missing → insufficient evidence
-- regression → if insufficient data → insufficient evidence
+- regression → use parse_regression() to extract values, then calculate()
 
 ---
 
@@ -181,4 +182,5 @@ Unicode minus (−), conventional rounding (0.5→up)
 | `extract_column_values(table, header)` | Get column |
 | `calculate(expression)` | Math eval |
 | `linear_regression(x, y)` | OLS |
+| `parse_regression(json_str)` | Parse regression JSON |
 | `write_answer(answer)` | Final | |
