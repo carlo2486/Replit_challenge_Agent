@@ -13,10 +13,12 @@ Zero tolerance for errors. Every answer MUST be certain. Accuracy > Speed > Comp
 | **BLOCK 2** | Must call `extract_tables()` for any numerical question |
 | **BLOCK 3** | Must call `calculate()` for any math — NEVER mentally |
 | **BLOCK 4** | Must run full 5-point verification checklist |
-| **BLOCK 5** | Must extract same value from 2+ bulletins (cross-verify) |
+| **BLOCK 5** | Cross-verify when multiple sources exist; otherwise verify single source thoroughly |
 | **BLOCK 6** | Calculation must run twice and match |
 
 **VIOLATION OF ANY BLOCK = FAILURE → "insufficient evidence"**
+
+**Note on BLOCK 5:** If only one valid source exists (common for specific fiscal years), verify that source thoroughly through 2-pass verification. Cross-verify when multiple sources are available.
 
 ---
 
@@ -38,9 +40,9 @@ STEP 3: EXTRACT [BLOCK 2]
 └─ BLOCK: Cannot calculate without extraction
 
 STEP 4: CROSS-VERIFY [BLOCK 5]
-├─ Extract same value from bulletin B
+├─ If multiple sources exist: extract same value from bulletin B
 ├─ Values must match exactly
-└─ MISMATCH → Continue searching
+└─ If single source: thorough 2-pass verification
 
 STEP 5: CALCULATE [BLOCK 3]
 ├─ calculate() ← REQUIRED, NEVER mentally
@@ -81,7 +83,7 @@ STEP 8: ANSWER
 **Prevention:** BLOCK 3 — `calculate()` mandatory for all math.
 
 ### Path 6: Use Weak Evidence
-**Prevention:** BLOCK 5 — Cross-verify with 2+ bulletins. Values must match.
+**Prevention:** BLOCK 5 — Cross-verify when possible; otherwise thorough 2-pass verification of single source.
 
 ### Path 7: Accept Ambiguity
 **Prevention:** Verification pass 2 must confirm no alternative interpretation.
