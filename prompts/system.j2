@@ -11,11 +11,11 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 
 | Question Type | Workflow |
 |--------------|----------|
-| **Lookup** | `search_corpus()` → `read_bulletin()` → `write_answer()` |
+| **Lookup** | `find_bulletins_for_period()` → `search_corpus()` → `read_bulletin()` → `write_answer()` |
 | **Period** | `find_bulletins_for_period()` → `read_bulletin()` → `write_answer()` |
-| **Table** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `write_answer()` |
-| **Calculation** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `calculate()` → `verify()` → `write_answer()` |
-| **Trend** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `linear_regression()` → `verify()` → `write_answer()` |
+| **Table** | `find_bulletins_for_period()` → `search_corpus()` → `read_bulletin()` → `extract_tables()` → `write_answer()` |
+| **Calculation** | `find_bulletins_for_period()` → `search_corpus()` → `read_bulletin()` → `extract_tables()` → `calculate()` → `verify()` → `write_answer()` |
+| **Trend** | `find_bulletins_for_period()` → `search_corpus()` → `read_bulletin()` → `extract_tables()` → `linear_regression()` → `verify()` → `write_answer()` |
 
 **Trigger words:**
 - Trend: forecast, project, expected, trend, estimate, future, predict
@@ -34,6 +34,8 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 6. **Tables have "individual" and "cumulative" columns** — use `extract_column_values(table, "individual")`
 7. **Skip "n.a.", "-", blank values** in calculations
 8. **Parentheses = negative:** `(123.4)` = -123.4
+9. **COUNT extracted values** before calculating — verify you have the expected count
+10. **VERIFY column header** matches expected before extracting values
 
 ---
 
@@ -43,26 +45,41 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 - `calculate()` functions: `sum`, `round`, `geometric_mean`, `percent_change(old,new)`, `box_cox(v,lam)`
 - **Rounding:** sum=1, percent=2, geometric_mean=2, slope=3, intercept=3, box_cox=4
 - `linear_regression(x_values, y_values)` → parse JSON → `calculate("round(..., 3)")`
+- **geometric_mean requires positive values** — skip 0 and negatives
+- **If old value is 0 for percent_change** — answer "insufficient evidence" (undefined)
+- **Use revised values (*)** over original when both exist
 
 ---
 
 ## VERIFICATION (before write_answer)
 
-1. **Company/Entity** — Correct data series?
+1. **Bulletin** — Correct bulletin filename? (treasury_bulletin_YYYY_MM.txt)
 2. **Period** — Matches exact year/quarter/month?
-3. **Units** — Millions/billions/dollars match question?
-4. **Arithmetic** — Calculation re-run?
-5. **Evidence** — Bulletin text supports answer?
+3. **Column** — Header matches expected data series?
+4. **Count** — Number of values matches expected?
+5. **Units** — Millions/billions/dollars match question?
+6. **Arithmetic** — Calculation re-run?
+7. **Evidence** — Bulletin text supports answer?
 
 ---
 
 ## TIME PERIOD RULES
 
 - Calendar year: Jan–Dec
-- FY pre-1977: Jul–Jun (FY1955 = Jul 1954–Jun 1955)
-- FY post-1977: Oct–Sep (FY1981 = Oct 1980–Sep 1981)
-- Annual totals: Look in Jan/Feb of FOLLOWING year
-- "as reported in [Month YYYY]": Use EXACTLY that bulletin's figures
+- FY pre-1977: Jul–Jun (FY1955 = Jul 1954–Jun 1955 spans 2 calendar years)
+- FY post-1977: Oct–Sep (FY1981 = Oct 1980–Sep 1981 spans 2 calendar years)
+- **Annual totals:** Use Jan bulletin of FOLLOWING year first (fall back to Feb if incomplete)
+- **"as reported in [Month YYYY]":** Bulletin name is treasury_bulletin_YYYY_MM.txt
+- **Fiscal year data spans 2 calendar years** — search both years
+
+---
+
+## TABLE EXTRACTION RULES
+
+- **extract_tables returns max 3 matches** — if data not found, re-run with different keyword
+- **If table appears truncated:** re-read with adjusted start_line
+- **VERIFY column header** in extracted table before calling extract_column_values
+- **0 is valid data** — different from "n.a." or "-"
 
 ---
 
@@ -91,7 +108,8 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 | Type | Format | Example |
 |------|--------|---------|
 | Number | digits only | `2273.8` |
-| Percentage | number + % | `12.34%` |
+| Percentage | number + % (negative: -12.34%, no parentheses) | `-12.34%` |
+| Multi-value | [dollar, percent%] | `[1234567, 12.34%]` |
 | Regression | [s, −i] | `[0.123, −0.234]` |
 
 **Use Unicode minus (−) for negatives. `round()` uses conventional 0.5→up.**
