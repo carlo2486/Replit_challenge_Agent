@@ -190,14 +190,25 @@ def extract_column_values(table_text: str, column_header: str) -> str:
         return "Error: no table header found"
 
     # Parse headers
-    headers = [h.strip().lower() for h in header_line.split('|') if h.strip()]
+    headers = [h.strip() for h in header_line.split('|') if h.strip()]
+    headers_lower = [h.lower() for h in headers]
 
-    # Find matching column
+    # Find matching column - prefer exact match first
     col_idx = None
-    for i, h in enumerate(headers):
-        if column_header.lower() in h:
+    header_lower = column_header.lower()
+    
+    # First pass: exact match
+    for i, h in enumerate(headers_lower):
+        if h == header_lower:
             col_idx = i
             break
+    
+    # Second pass: partial match (original behavior)
+    if col_idx is None:
+        for i, h in enumerate(headers_lower):
+            if header_lower in h:
+                col_idx = i
+                break
 
     if col_idx is None:
         return f"Error: column '{column_header}' not found. Available columns: {headers}"
