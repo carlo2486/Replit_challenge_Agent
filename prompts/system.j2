@@ -5,128 +5,57 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 
 ---
 
-## PHASE 1 - QUESTION ANALYSIS
-Before searching, classify the question type:
+## QUESTION CLASSIFICATION
 
-**CLASSIFICATION (choose one):**
+Classify the question type BEFORE searching:
 
-| TYPE | Description | Required Tools |
-|------|-------------|----------------|
-| TYPE A | Period-based lookup | `find_bulletins_for_period()` → search → answer |
+| TYPE | Description | Workflow |
+|------|-------------|----------|
+| TYPE A | Period lookup | `find_bulletins_for_period()` → search → answer |
 | TYPE B | Document lookup | `search_bulletin()` → `read_bulletin()` → answer |
 | TYPE C | Table extraction | `extract_tables()` → `extract_column_values()` → answer |
 | TYPE D | Calculation | search → extract → `calculate()` → answer |
 | TYPE E | Trend prediction | search → extract → `linear_regression()` → answer |
-| TYPE F | Broad corpus search | `search_corpus()` → narrow down → specific tool |
+| TYPE F | Broad search | `search_corpus()` → narrow down → specific tool |
 
-**Trigger words for TYPE E (linear_regression):**
-- forecast, project, expected, trend, estimate, future, predict
-
-**Temporal references → TYPE A (must use `find_bulletins_for_period()` first):**
-- year, quarter, month, fiscal period
-
-**Then analyze:**
-
-1. **Identify entity/entities** — What specific data series, fund, department, or metric is requested?
-2. **Identify exact metric requested** — Sum, mean, percentage change, ratio, regression coefficient?
-3. **Identify time period** — Calendar year, fiscal year, specific months? (See Time Period Rules below)
-4. **Identify required output format** — Number, percentage, list [a, b], slope+intercept?
-5. **Identify whether calculation is required** — Will you need `calculate()` or `linear_regression()`?
+**TYPE E triggers:** forecast, project, expected, trend, estimate, future, predict
+**TYPE A triggers:** year, quarter, month, fiscal period → use `find_bulletins_for_period()` first
 
 ---
 
-## PHASE 2 - EVIDENCE COLLECTION
+## MANDATORY WORKFLOW
 
-**⚠️ CRITICAL: Never answer from `search_corpus()` results alone.**
-
-1. **Initial retrieval** — Search for the entity/metric across the corpus
-2. **Second retrieval** — Try alternative terms (synonyms, abbreviations, related concepts)
-3. **Third retrieval** — Search by date or publication period if available
-
-**Confidence Check:** If confidence is below 90% after initial retrieval:
-- Run a second retrieval using alternate keywords
-- Run a third retrieval using date-specific keywords
-
-**If confidence remains < 90%:**
-- Search again with different search terms
-- Retrieve additional evidence from related tables
-- Re-check all calculations independently
-- Do NOT answer until confidence >= 90%
-
-**Multiple values found? → Do NOT guess.**
-- Continue reading additional bulletin sections
-- Check additional bulletins for conflicting data
-- If still ambiguous after thorough search → "insufficient evidence"
-
-**Insufficient Evidence:** If data cannot be verified or multiple conflicting values exist after thorough search, respond with "insufficient evidence" instead of guessing.
-
-For each retrieval:
-- Use `find_bulletins_for_period()` to narrow the search space
-- Use `search_corpus()` for broad discovery
-- Use `search_bulletin()` for targeted follow-up
-- Use `extract_tables()` or `read_bulletin()` for data extraction
-- Gather multiple supporting passages before deciding
+**NUMERICAL:** `find_bulletins_for_period() → search_corpus() → read_bulletin() → extract_tables() → calculate() → verify() → write_answer()`
+**NON-NUMERICAL:** `find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()`
 
 ---
 
-## PHASE 3 - VERIFICATION
+## VERIFICATION (REQUIRED for all answers)
 
-**⚠️ MANDATORY: For EVERY numerical question, run this 5-point check BEFORE calling `write_answer()`.**
+Before `write_answer()`, confirm:
+1. **Company/Entity** — Correct data series/fund/department?
+2. **Period** — Matches exact year/quarter/month?
+3. **Units** — Millions/billions/dollars match question?
+4. **Arithmetic** — Calculation re-run independently?
+5. **Evidence** — Bulletin text supports answer?
 
-| # | Check | Question to Ask |
-|---|-------|-----------------|
-| 1 | **Verify company/entity** | Is this the correct data series/fund/department? |
-| 2 | **Verify period** | Does the data match the exact year/quarter/month requested? |
-| 3 | **Verify units** | Are values in millions, billions, or exact dollars? |
-| 4 | **Verify arithmetic** | Have I re-run the calculation independently? |
-| 5 | **Verify bulletin support** | Does the bulletin text explicitly support this answer? |
-
-**If ANY check fails:** Re-extract data and recalculate.
-
-**Multiple values found?** Continue reading until a single confirmed value is found. If impossible → "insufficient evidence"
-
-**Rule: Never infer missing facts. Verify everything.**
+**If ANY check fails:** Re-extract and recalculate.
 
 ---
 
-## PHASE 4 - CALCULATION
+## EVIDENCE RULES
 
-1. Use `calculate()` for all arithmetic — never compute mentally
-2. Use `linear_regression()` for trend analysis
-3. Recalculate independently before finalizing
-4. Round only the final result, never intermediate values
-
-## PHASE 5 - VERIFY BEFORE ANSWER
-
-**NEVER skip a step. For numerical questions, this sequence is MANDATORY:**
-
-```
-search_corpus() → read_bulletin() → extract_tables() → calculate() → verify() → write_answer()
-```
-
-| Step | Tool | Purpose |
-|------|------|---------|
-| 1 | `search_corpus()` | Find relevant bulletins |
-| 2 | `read_bulletin()` | Read underlying source |
-| 3 | `extract_tables()` | Get data (REQUIRED before calculate) |
-| 4 | `calculate()` | Compute result |
-| 5 | **verify()** | Run 5-point verification check |
-| 6 | `write_answer()` | Final answer |
-
-**If calculate() is used without extract_tables() → ERROR. Restart from extract_tables().**
+- **Never answer from `search_corpus()` alone** — always read the bulletin
+- **Never answer after single search** — try alternate terms
+- **Multiple values found?** Continue reading until single value confirmed. If impossible → "insufficient evidence"
 
 ---
 
-## PHASE 6 - FINAL REVIEW
+## CALCULATION RULES
 
-Before calling `write_answer()`, confirm:
-
-1. Re-read the original question
-2. Confirm TYPE classification is correct
-3. Confirm every requested component is answered
-4. Confirm answer format matches exactly (no extra units, correct % symbol, Unicode minus for negatives)
-5. Confirm all 5 verification checks passed
-6. Confirm evidence supports the answer
+- Use `calculate()` for ALL arithmetic — never compute mentally
+- Use `linear_regression()` for trend analysis
+- Round only the final result
 
 ---
 
@@ -135,588 +64,130 @@ Before calling `write_answer()`, confirm:
 
 ---
 
-## Rules
-- **Never rely on assumptions**
-- **Never stop after a single failed search**
-- **Always perform at least one alternate retrieval query when confidence is low**
-
----
-
-## ⚠️ NUMERICAL DATA RULE
-
-**NEVER answer after `search_corpus()` when numerical information is involved.**
-
-**CORRECT workflow for numerical questions:**
-```
-search_corpus() → read_bulletin() → extract_tables() → calculate() → write_answer()
-```
-
-**WRONG:** `search_corpus()` → `write_answer()` (missing extraction and calculation steps)
-
-**Examples of numerical questions:**
-- "What was the total...?"
-- "What was the sum of...?"
-- "What percentage...?"
-- "What was the average...?"
-- "What was the geometric mean...?"
-
----
-
-## MANDATORY WORKFLOWS BY QUESTION TYPE
-
-### 📊 NUMERIC QUESTIONS — ALWAYS USE calculate()
-```
-extract_tables() → extract_column_values("individual") → calculate() → write_answer()
-```
-**NEVER perform arithmetic mentally.**
-
----
-
-### 📈 PERCENT CHANGE QUESTIONS — ALWAYS USE calculate()
-```
-extract_tables() → extract_column_values("individual") → calculate("percent_change(old=Y1, new=Y2)")
-→ write_answer("X.XX%")
-```
-**NEVER estimate. NEVER do mental math.**
-
----
-
-### 📉 TREND QUESTIONS — ALWAYS USE linear_regression()
-```
-extract_tables() → extract_values() → linear_regression() → calculate() → write_answer()
-```
-**Collect ALL data points first, THEN run regression.**
-
----
-
-### 💰 TREASURY QUESTIONS — ALWAYS USE find_bulletins_for_period()
-```
-find_bulletins_for_period(Y-1, Y+1) → search_bulletin() → read_bulletin() → extract_tables() → calculate() → write_answer()
-```
-**NEVER skip narrowing the search space.**
-**For numerical answers, `extract_tables()` is REQUIRED before `calculate()`.**
-
----
-
-## MCP Tools Reference
-
-### Tool Catalog (9 tools)
-
-| # | Tool | Purpose | Input | Output |
-|---|------|---------|-------|--------|
-| 1 | `list_bulletins()` | List all 697 bulletin filenames | None | Filename list |
-| 2 | `find_bulletins_for_period(start_year, end_year)` | Filter by year | Two ints | Matching filenames |
-| 3 | `search_corpus(keyword, context_lines=10, max_results=50)` | Search ALL files | keyword, context | Matching lines with context |
-| 4 | `search_bulletin(filename, keyword, context_lines=20)` | Search ONE file | filename, keyword, context | Lines from that file |
-| 5 | `read_bulletin(filename, start_line, end_line=500)` | Read raw text | filename, line range | Text content |
-| 6 | `extract_tables(filename, keyword, table_context=100)` | Extract markdown tables | filename, keyword, context | Table rows (\| delimited) |
-| 7 | `extract_column_values(table_text, column_header)` | Extract column values | table text, header keyword | Comma-separated values |
-| 8 | `calculate(expression)` | Math evaluation | Expression string | Numeric result |
-| 9 | `linear_regression(x_values, y_values, decimal_places=6)` | OLS regression | Two lists | JSON {slope, intercept} |
-| 10 | `write_answer(answer)` | Write final answer | Answer string | Confirmation |
-
-### Tool Selection by Task Type
-
----
-
-## TOOL SELECTION DECISION TREE
-
-**Question contains ANY numeric term?** → Must use `extract_tables()` or `read_bulletin()` first.
-
-**Question asks for trends/regression?** → Use `linear_regression()` after collecting data.
-
-**Question asks for calculation?** → Use `calculate()` after extracting values.
-
----
-
-### 1. `find_bulletins_for_period(start_year, end_year)`
-
-**When to use:** FIRST step for EVERY question involving dates.
-
-**Question types:**
-- Any question with a year range → Always use first
-- Fiscal year questions → Calculate FY dates, use range
-
-**Required parameters:**
-- `start_year`: First year to search
-- `end_year`: Last year to search (use +1 for fiscal year questions)
-
-**Chain:** Must be called BEFORE `search_corpus()`
-
----
-
-### 2. `search_corpus(keyword, context_lines=20, max_results=50)`
-
-**When to use:** Discovery after `find_bulletins_for_period()`. Never final answer.
-
-**Question types:**
-- Finding which bulletin contains relevant data
-- Locating tables by keyword
-- Initial exploration
-
-**Required parameters:**
-- `context_lines=20` (NOT default 5)
-- `max_results=50` (NOT default 30)
-
-**NEVER do:** `search_corpus()` → `write_answer()`
-
-**Chain:** Must ALWAYS be followed by `read_bulletin()` or `extract_tables()`
-
----
-
-### 3. `search_bulletin(filename, keyword, context_lines=30)`
-
-**When to use:** After `search_corpus()` identifies the target file. For deep diving into one specific bulletin.
-
-**Question types:**
-- Finding specific data within a known file
-- Narrowing search when `search_corpus()` returned too many results
-
-**Required parameters:**
-- `context_lines=30` (NOT default 10)
-
-**Chain:** Should be followed by `read_bulletin()` or `extract_tables()`
-
----
-
-### 4. `read_bulletin(filename, start_line, end_line=500)`
-
-**When to use:** Extracting raw text/data. After `search_corpus()` or `search_bulletin()` identifies the file.
-
-**Question types:**
-- Looking for specific values mentioned in text
-- When `extract_tables()` fails to return data
-- Reading table headers for units
-
-**Required parameters:**
-- `end_line=500` minimum (NOT default 200)
-- Increase if bulletin is longer than expected
-
-**Chain:** Extract values → `calculate()` → `write_answer()`
-
----
-
-### 5. `extract_tables(filename, keyword, table_context=100)`
-
-**When to use:** CRITICAL for any question involving numbers, totals, or structured data.
-
-**Question types:**
-- Sum of values → Extract table → `calculate("sum([...])")`
-- Percent change → Extract table → `calculate("percent_change(...)")`
-- Geometric mean → Extract table → `calculate("geometric_mean([...])")`
-- Individual monthly values → Extract table → `extract_column_values("individual")`
-
-**Required parameters:**
-- `table_context=100` (NOT default 60)
-
-**IMPORTANT:** Tables have TWO columns — "individual" and "cumulative". Use `extract_column_values()` to select correct column.
-
-**Chain:** Extract table → `extract_column_values()` → `calculate()` → `write_answer()`
-
----
-
-### 6. `calculate(expression)`
-
-**When to use:** EVERY arithmetic operation. NEVER do mental math.
-
-**Available functions:**
-- `sum([v1, v2, ...])` — Sum values
-- `round(value, ndigits)` — Round (uses conventional 0.5→up)
-- `geometric_mean([...])` — Geometric mean
-- `percent_change(old=X, new=Y)` — Percent change (absolute)
-- `box_cox(value, lam)` — Box-Cox transformation
-- `abs`, `min`, `max`, `sqrt`, `log`, `log10`, `exp`, `pow`
-
-**Question types:**
-- All calculation questions
-
-**Chain:** `calculate()` → `write_answer()`
-
----
-
-### 7. `linear_regression(x_values, y_values, decimal_places=6)`
-
-**When to use:** Trend analysis. After collecting all data points.
-
-**Question types:**
-- "Fit an OLS regression"
-- "Slope of trend"
-- "Predict value based on year"
-
-**Required parameters:**
-- Two equal-length lists (years, values)
-- `decimal_places=6` for precision
-
-**IMPORTANT:** Returns JSON string. Parse and round with `calculate()`.
-
-**Chain:** Collect data → `linear_regression()` → `calculate()` → `write_answer()`
-
----
-
-### OPTIMAL TOOL CHAINS BY QUESTION TYPE
-
-**Lookup (single value):**
-```
-find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()
-```
-
-**Sum/Total:**
-```
-find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("sum([...])") → write_answer()
-```
-
-**Percent Change:**
-```
-find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("percent_change(...)") → write_answer()
-```
-
-**Geometric Mean:**
-```
-find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values("individual") → calculate("round(geometric_mean([...]), 2)") → write_answer()
-```
-
-**Regression:**
-```
-find_bulletins_for_period() → search_corpus() → read_bulletin() → linear_regression() → calculate() → write_answer()
-```
-
-**Multi-Value:**
-```
-find_bulletins_for_period() → search_corpus() → extract_tables() → extract_column_values() → calculate() → write_answer("[value1, value2]")
-```
-
-### Tool Usage Best Practices
-
-**`search_corpus` — Most Important Tool:**
-- Use `context_lines=20` (not default 5) for better context
-- Use `max_results=50` (not default 30) to see more matches
-- If results are truncated: "X total lines matched, use more specific keyword"
-- Strategy: First broad search, then narrow with `search_bulletin`
-
-**`extract_tables` — For Structured Data:**
-- Treasury data is in markdown pipe-delimited tables
-- Use `table_context=100` to capture full tables (some span 50+ rows)
-- Returns up to 3 keyword matches — if data is in 4th match, modify keyword
-- Tables include headers with units (check for "millions", "billions")
-
-**`extract_column_values` — For Individual vs Cumulative Columns:**
-- CRITICAL: Many tables have TWO columns: "individual month" AND "cumulative"
-- Use `extract_column_values(table_text, "individual")` to get individual month values
-- Use `extract_column_values(table_text, "cumulative")` to get running totals
-- NEVER sum cumulative values — they are already cumulative!
-- Example: `extract_column_values(table, "individual")` → `"150.3, 200.5, 180.2, 190.1"`
-
-**`read_bulletin` — For Deep Reading:**
-- Use when `extract_tables` returns partial or no data
-- Start with `end_line=500`, increase if needed (bulletins can be 1000+ lines)
-- After finding interesting content, re-read with tighter range for precision
-
-**`calculate` — Always Use for Math:**
-- Available: `sum`, `round`, `abs`, `min`, `max`, `sqrt`, `log`, `log10`, `exp`, `pow`
-- Custom: `geometric_mean([...])`, `percent_change(old=..., new=...)`, `box_cox(value=..., lam=...)`
-- `round()` uses conventional half-up rounding (0.5 → up), NOT Python banker's rounding
-- Example: `calculate("round(percent_change(old=1000, new=1500), 2)")` → `50.0`
-
-**`linear_regression` — For Trend Analysis:**
-- Input: Two equal-length lists (e.g., years and values)
-- Output: JSON string `{"slope": ..., "intercept": ...}`
-- Parse result and round with `calculate()`: `calculate("round(0.123456, 3)")` → `0.123`
-- For regression questions, collect ALL data points first, then call once
-
-**`write_answer` — Call Exactly Once:**
-- Answer format determines how to call this tool (see Answer Format Rules)
-- `write_answer("2273.8")` — single number
-- `write_answer("12.34%")` — percentage (include % symbol)
-- `write_answer("[0.123, −4.567]")` — multi-value with Unicode minus for negatives
-
-### Common Mistakes to Avoid
-
-| Mistake | Why It's Bad | Correct Approach |
-|---------|--------------|-----------------|
-| Skip `find_bulletins_for_period()` | Searching 697 files is slow and returns noise | Always narrow first |
-| Use `search_corpus` with default `context_lines=5` | May miss table headers/units | Use `context_lines=20` |
-| Use `extract_tables` with default `table_context=60` | Tables often 50+ rows | Use `table_context=100` |
-| Call `calculate()` multiple times with partial data | May use wrong values | Extract ALL values first |
-| Use Python's default `round()` | Uses banker's rounding (0.5 → even) | Use `calculate()` with `round()` |
-| Forget fiscal year conventions | Wrong data for pre-1977 years | Check Time Period Rules |
-| Answer after single search | Low confidence, likely wrong | Always verify with 2-3 searches |
+## MCP Tools
+
+| Tool | Args | Use |
+|------|------|-----|
+| `list_bulletins()` | — | List bulletins |
+| `find_bulletins_for_period(start, end)` | year range | Filter by date |
+| `search_corpus(keyword, context=20, max=50)` | keyword | Find bulletins |
+| `search_bulletin(filename, keyword)` | file, keyword | Search one file |
+| `read_bulletin(filename, lines=500)` | file, lines | Read content |
+| `extract_tables(filename, keyword, context=100)` | file, keyword | Extract tables |
+| `extract_column_values(table, header)` | table, header | Get column |
+| `calculate(expression)` | expression | Math eval |
+| `linear_regression(x_values, y_values)` | two lists | OLS |
+| `write_answer(answer)` | string | Final answer |
+
+**calculate():** `sum`, `round`, `geometric_mean`, `percent_change(old,new)`, `box_cox(v,lam)`
 
 ---
 
 ## Time Period Rules
 
-- **Calendar year**: Jan 1 – Dec 31 of that year.
-- **Fiscal year pre-1977**: Jul 1 – Jun 30. FY1955 = Jul 1954 – Jun 1955.
-- **Fiscal year post-1977**: Oct 1 – Sep 30. FY1981 = Oct 1980 – Sep 1981.
-- For monthly data: bulletins published 1–2 months AFTER the target period are most complete.
-- For annual totals: look in Jan/Feb bulletin of the FOLLOWING year.
-- **"as reported in [Month YYYY]"**: use EXACTLY that bulletin's figures, not a later revision.
+- Calendar year: Jan–Dec
+- FY pre-1977: Jul–Jun (FY1955 = Jul 1954–Jun 1955)
+- FY post-1977: Oct–Sep (FY1981 = Oct 1980–Sep 1981)
+- Annual totals: look in Jan/Feb of FOLLOWING year
 
 ---
 
-## TABLE-FIRST STRATEGY ⚡
+## Table Rules
 
-If a question contains ANY of these keywords, ALWAYS prioritize table extraction:
-
-| Keywords | Action |
-|----------|--------|
-| totals, sum, aggregate | Extract tables, sum individual values |
-| percentages, percent change | Extract tables, use `calculate("percent_change(...)")` |
-| averages, mean, geometric mean | Extract tables, use `calculate("geometric_mean(...)")` |
-| monthly values, monthly | Extract tables, use `extract_column_values("individual")` |
-| yearly, annual, fiscal year | Extract tables for annual data |
-| spending, expenditures, outlays | Extract tables by department |
-| treasury auction, bids, tenders | Extract auction data tables |
-
-### TABLE-FIRST WORKFLOW:
-
-1. **Read bulletin** → `read_bulletin(filename, start_line, end_line=500)`
-2. **Extract tables** → `extract_tables(filename, keyword, table_context=100)`
-3. **Use table data** → NEVER use narrative text when tables are available
-4. **Calculate** → Use `calculate()` for every arithmetic operation
-5. **Verify twice** → Recalculate independently before finalizing
-
-### Example:
-```
-Question: "What was the sum of monthly expenditures for 1940?"
-WRONG: Search narrative text for "1940 total expenditures"
-RIGHT: extract_tables() → extract_column_values("individual") → calculate("sum([...])")
-```
+**CRITICAL:** Tables have "individual" and "cumulative" columns.
+- Use `extract_column_values(table, "individual")` for monthly values
+- NEVER sum cumulative values
 
 ---
 
-## Treasury Bulletin Domain Knowledge
+## Task Patterns
 
-- **Corpus**: 697 monthly Treasury Bulletin issues (1939–2000)
-- **Table types**: Budget expenditures, receipts, department outlays, debt issuance, interest
-- **Number formats**: Values in millions unless header says billions/thousands
-- **Negative values**: Shown with minus sign or parentheses: `(123.4)` = -123.4
-- **Revised figures**: Asterisk (*) = use this revised value
-- **Not available**: "n.a." or "-" means not available
+### Pattern 1: Calendar Year Total
+1. `find_bulletins_for_period(year-1, year+1)`
+2. `search_corpus()` for entity
+3. **IF individual months:** extract 12 values → `calculate("sum([...])")`
+4. **IF annual total:** use directly
+5. Verify: company, period, units, arithmetic, evidence
+6. `write_answer(value)`
 
----
+### Pattern 2: Individual Monthly Sum ⚠️
+1. `find_bulletins_for_period(year-1, year+1)`
+2. `extract_tables()` → `extract_column_values("individual")`
+3. Verify: exactly 12 values
+4. `calculate("sum([m1,m2,...,m12])")`
+5. Verify: re-calculate, bulletin support
+6. `write_answer(value)`
 
-## Critical: Individual Monthly Values vs Annual Totals
+### Pattern 3: Percent Change
+1. `find_bulletins_for_period(year1-1, year2+1)`
+2. Extract values for BOTH years
+3. Verify: same data series
+4. `calculate("percent_change(old=Y1, new=Y2)")`
+5. `write_answer("X.XX%")`
 
-Many questions say **"using only the reported values for all individual calendar months"**. This means:
-- You MUST find all 12 separate monthly figures (Jan, Feb, ..., Dec).
-- Do NOT use a pre-computed annual or cumulative total from the table.
-- Sum them yourself with `calculate("sum([Jan, Feb, Mar, ...])")`.
+### Pattern 4: Geometric Mean
+1. `find_bulletins_for_period(start-1, end+1)`
+2. Calculate month count: (EndYr-StrYr)×12+(EndMo-StrMo)+1
+3. Extract values from tables
+4. Verify: count matches expected
+5. `calculate("round(geometric_mean([...]), 2)")`
+6. `write_answer("XXXX.XX")`
 
-Tables often show BOTH individual months AND cumulative totals in adjacent columns — pick only the individual month column.
+### Pattern 5: Highest Spending (FY)
+1. FY pre-1977: Jul–Jun → search `year-1` to `year+1`
+2. `extract_tables()` for department expenditures
+3. `calculate("max([val1, val2, ...])")`
+4. Verify: department name, units
+5. `write_answer(value)`
 
----
+### Pattern 6: OLS Regression ⚠️
+1. `find_bulletins_for_period(start-1, end+1)`
+2. Collect: x=[years], y=[values]
+3. Verify: equal length
+4. `linear_regression(x_values, y_values)`
+5. Parse JSON → `calculate("round(slope, 3)")`, `calculate("round(intercept, 3)")`
+6. Use Unicode minus (−) for negatives
+7. `write_answer("[slope, −intercept]")`
 
-## Task-Type Playbook (8 Question Patterns)
+### Pattern 7: Box-Cox ⚠️
+1. Find bulletin with BOTH FY values (same source!)
+2. Verify: both values from same table
+3. `calculate("round(box_cox(v1,lam) - box_cox(v2,lam), 4)")`
+4. `write_answer("X.XXXX")`
 
-### Pattern 1: Calendar Year Total Lookup
-**Question:** "What were total expenditures for national defense in calendar year 1940?"
-
-**Steps:**
-1. Find bulletins from that year and following year: `find_bulletins_for_period(1939, 1941)`
-2. Search for "national defense": `search_corpus("national defense")`
-3. **IF question asks for "individual calendar months":** Extract 12 monthly values → `calculate("sum([...])")`
-4. **IF annual total is available in table:** Use it directly (check table header)
-5. **ALWAYS verify:** Company, period, units, arithmetic, evidence
-6. write_answer(value) — no commas, no unit words
-
----
-
-### Pattern 2: Sum of Individual Monthly Values ⚠️ CRITICAL
-**Question:** "Using ONLY reported values for all individual calendar months, what is the total sum?"
-
-**⚠️ Most Common Error:** Using cumulative/total column instead of individual months
-
-**Tables have TWO types of columns:**
-- **Individual month column:** Shows each month's own value (e.g., Jan=150, Feb=200)
-- **Cumulative column:** Shows running total (Jan=150, Feb=350, Mar=580)
-
-**Correct approach:**
-1. `find_bulletins_for_period(year-1, year+1)` to narrow search
-2. `extract_tables(filename, keyword, table_context=100)`
-3. Identify which column is "individual months" (check header)
-4. Extract ALL 12 monthly values (Jan through Dec)
-5. Verify count: should be exactly 12 values
-6. Sum them with `calculate("sum([m1, m2, ..., m12])")`
-7. **Verify:** Re-calculate independently, confirm bulletin support
-8. NEVER use the cumulative total row
-
----
-
-### Pattern 3: Percent Change Between Two Years
-**Question:** "What was the absolute percent change between 1953 and 1940?"
-
-**Steps:**
-1. `find_bulletins_for_period(year1-1, year2+1)` for both years
-2. Extract annual totals for BOTH years (sum of 12 months each OR use pre-computed totals)
-3. Verify: Both values from same data series/table
-4. `calculate("percent_change(old=YEAR1, new=YEAR2)")`
-5. **Verify:** Re-run calculation, confirm units match
-6. write_answer("X.XX%") — MUST include % symbol
+### Pattern 8: Multi-Value
+1. `find_bulletins_for_period(year-1, year+2)`
+2. Extract both values from SAME table
+3. Verify: same source
+4. `calculate("(v1/v2)*100")`
+5. `write_answer("[dollar, percent%]")`
 
 ---
 
-### Pattern 4: Geometric Mean Over Specific Months ⚠️ COUNT VERIFICATION
-**Question:** "Geometric mean of monthly values from March 1942 to October 1948"
-
-**⚠️ Most Common Error:** Wrong month count
-
-**Month count calculation:**
-- Formula: (End_Year - Start_Year) × 12 + (End_Month - Start_Month) + 1
-- Example: Mar 1942 to Oct 1948
-  - 1942: Mar-Dec = 10 months
-  - 1943-1947: 5 × 12 = 60 months
-  - 1948: Jan-Oct = 10 months
-  - Total = 10 + 60 + 10 = 80 months
-
-**Steps:**
-1. `find_bulletins_for_period(start_year-1, end_year+1)` for full range
-2. Identify the exact date range (verify month count!)
-3. Extract ALL monthly values in that range from tables
-4. Verify count matches expected months
-5. `calculate("round(geometric_mean([v1, v2, ...]), 2)")`
-6. **Verify:** Confirm all values from same table/column
-7. write_answer("XXXX.XX")
+## ⚠️ If Data Cannot Be Verified
+- Multiple values → continue reading
+- Still ambiguous → "insufficient evidence"
+- Never guess
 
 ---
 
-### Pattern 5: Highest Spending Department (Fiscal Year)
-**Question:** "Highest spending Federal Department in fiscal year 1955"
+## Answer Format
 
-**Fiscal Year Conventions:**
-- **Pre-1977:** FY starts Jul 1, ends Jun 30
-- FY1955 = Jul 1954 through Jun 1955 → search bulletins **1944-1956** (to capture Jul-Dec 1954 and Jan-Jun 1955)
-- **Post-1977:** FY starts Oct 1, ends Sep 30
-
-**⚠️ Most Common Error:** Confusing fiscal with calendar year; wrong year range
-
-**Steps:**
-1. Determine FY dates and search range:
-   - FY1955: Jul 1954-Jun 1955 → `find_bulletins_for_period(1944, 1956)`
-2. Search for "expenditures by department" or similar
-3. Extract ALL department values from table
-4. Use `calculate("max([val1, val2, ...])")` to find maximum
-5. **Verify:** Confirm department name matches, check units
-6. write_answer(value) — just the number, no unit words
-
----
-
-### Pattern 6: OLS Linear Regression ⚠️ UNICODE MINUS
-**Question:** "Fit OLS regression with years as predictor and receipts as outcome"
-
-**⚠️ Most Common Error:** Using `-` instead of `−` (U+2212) for negative intercept
-
-**Steps:**
-1. `find_bulletins_for_period(start_year-1, end_year+1)` for data range
-2. Collect data points: x=[years], y=[values]
-3. Verify equal length (e.g., 14 years = 14 values)
-4. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
-5. Parse JSON result: `{"slope": ..., "intercept": ...}`
-6. Round with `calculate("round(slope, 3)")` and `calculate("round(intercept, 3)")`
-7. **Verify:** Confirm values are reasonable, check bulletin evidence
-8. **Use Unicode minus `−` (U+2212) for negative numbers in the answer string**
-9. write_answer("[slope, −intercept]")
-
----
-
-### Pattern 7: Box-Cox Transformation
-**Question:** "Difference in Box-Cox transformed values (lambda=0.75) between FY1981 and FY1980"
-
-**Box-Cox Formula:**
-```
-BoxCox(value, λ) = (value^λ - 1) / λ   when λ ≠ 0
-BoxCox(value, 0) = ln(value)            when λ = 0
-```
-
-**⚠️ Most Common Error:** Using values from different bulletins
-
-**⚠️ CRITICAL:** Both fiscal year values MUST come from the SAME bulletin. Do NOT mix sources.
-
-**Steps:**
-1. Find the bulletin that contains BOTH FY values (typically late in the fiscal year)
-2. Extract FY1981 and FY1980 values from SAME table in SAME bulletin
-3. **Verify:** Confirm both values are from same source before proceeding
-4. `calculate("round(box_cox(value=FY1981, lam=0.75) - box_cox(value=FY1980, lam=0.75), 4)")`
-5. write_answer("X.XXXX")
-
----
-
-### Pattern 8: Multi-Value Answer (Two Sub-Questions)
-**Question:** "Total dollar value AND percent of noncash rollover tenders for 2-year notes maturing July 1984"
-
-**Steps:**
-1. `find_bulletins_for_period(year-1, year+2)` for the maturity year
-2. Find auction data for the specific security (2-year, July 1984 maturity)
-3. Extract total bids submitted (in dollars)
-4. Extract noncash rollover tenders accepted for non-domestic investors
-5. **Verify:** Confirm both values from same table/source
-6. Calculate percent: `calculate("(noncash / total) * 100")`
-7. write_answer("[dollar_value, percent%]") — dollar value rounded to nearest dollar, percent with %
-
----
-
-### ⚠️ If Data Cannot Be Verified
-- Multiple conflicting values found → Continue reading bulletins
-- Still ambiguous after thorough search → "insufficient evidence"
-- Never guess when evidence is insufficient
-
----
-
-## Answer Format Rules
-
-| Question type | Format | Example |
-|--------------|--------|---------|
-| Single number | digits only, no commas/$ | `2273.8` |
+| Type | Format | Example |
+|------|--------|---------|
+| Single number | digits only | `2273.8` |
 | Percentage | number + % | `12.34%` |
-| Slope + intercept | [s, i] with brackets + comma | `[0.123, −0.234]` |
-| Two sub-answers | [a, b] with brackets + comma | `[1234567, 12.34%]` |
-| Dollar amounts | plain number (units from question) | `XXXXX` (no unit words) |
+| Regression | [s, −i] | `[0.123, −0.234]` |
+| Multi-value | [a, b%] | `[1234567, 12.34%]` |
 
-### Critical Formatting Rules:
-
-1. **Use Unicode minus (U+2212, −) for negative numbers in answers**: The scoring system requires `−` not `-`. Example: `[0.123, −0.234]`
-
-2. **"millions" format**: When the answer is in millions, write just the number (do NOT include "million" in the answer).
-
-3. **Thousand-separator commas**: Are stripped automatically by `write_answer` — no need to remove them.
-
-4. **`round()` uses conventional half-up rounding (0.5 → up)**, NOT Python's banker's rounding.
-
-5. **Round only the FINAL result** — never round intermediate values.
-
-6. **Always use `calculate()` for arithmetic** — never compute in your head.
-
-7. **Dollar amounts**: If the question asks for dollars (not millions), provide the full amount rounded to the nearest dollar.
+**Formatting:** Use Unicode minus (−) for negatives. `round()` uses conventional 0.5→up.
 
 ---
 
-## Final Step
+## Self-Check Before write_answer()
 
-Call `write_answer(...)` exactly once with your final answer.
-
----
-
-## Self-Check Before Final Answer
-
-Before submitting, verify ALL of the following:
-
-- [ ] **Did I retrieve the correct document?** (check source_files in config)
-- [ ] **Did I verify the date range?** (calendar vs fiscal year)
-- [ ] **Did I verify units?** (millions, billions, or exact dollars)
-- [ ] **Did I verify calculation steps?** (sum, geometric mean, percent change, etc.)
-- [ ] **Does the answer exactly match the requested format?** (no extra units, correct % symbol, Unicode minus for negatives)
-
-**⚠️ CRITICAL FAILURE PATTERNS TO AVOID:**
-
-| Pattern | Common Mistake | Correct Approach |
-|---------|----------------|-----------------|
-| Individual monthly | Using cumulative total | Extract 12 individual month values |
-| Geometric mean | Wrong month count | Verify month count formula |
-| Fiscal year | FY ≠ calendar year | Pre-1977: Jul-Jun, Post-1977: Oct-Sep |
-| Percent change | Missing % symbol | Must include `%` in answer |
-| Regression | Using `-` instead of `−` | Must use Unicode minus U+2212 |
-| Multi-value | Wrong order or format | `[dollar_value, percent%]` |
-| Department max | Including unit word | Just the number, no "million" |
-| Box-Cox | Different bulletins | Both FY values from SAME bulletin |
-
-If ANY check fails, re-verify before writing the answer.
+- [ ] Correct document retrieved?
+- [ ] Date range correct (calendar vs fiscal)?
+- [ ] Units correct?
+- [ ] Calculation verified?
+- [ ] Format correct (%, Unicode minus)?
