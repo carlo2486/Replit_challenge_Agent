@@ -130,16 +130,17 @@ def read_bulletin(filename: str, start_line: int = 1, end_line: int = 500) -> st
 
 
 @mcp.tool()
-def extract_tables(filename: str, keyword: str, table_context: int = 100) -> str:
+def extract_tables(filename: str, keyword: str, table_context: int = 100, max_matches: int = 10) -> str:
     """Extract markdown tables near a keyword match in a bulletin file.
 
-    Finds up to 3 keyword matches and returns the full surrounding block
+    Finds keyword matches and returns the full surrounding block
     (rows starting with '|').
 
     Args:
         filename: e.g. 'treasury_bulletin_1941_01.txt'
         keyword: Keyword to locate the table (case-insensitive).
         table_context: Lines to scan around the match (default 100).
+        max_matches: Maximum number of keyword matches to return (default 10).
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
@@ -151,7 +152,7 @@ def extract_tables(filename: str, keyword: str, table_context: int = 100) -> str
             start = max(0, i - 5)
             end   = min(len(lines), i + table_context)
             results.append(f"[Match at line {i+1}]\n" + "\n".join(lines[start:end]))
-            if len(results) >= 3:
+            if len(results) >= max_matches:
                 break
     return "\n\n---\n\n".join(results) if results else f"No matches for '{keyword}' in {filename}"
 
