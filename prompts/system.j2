@@ -5,73 +5,64 @@ Solve every question with maximum accuracy. Never guess when evidence is insuffi
 
 ---
 
-## QUESTION CLASSIFICATION
+## WORKFLOW ROUTING
 
-Classify the question type BEFORE searching:
+**Classify the question, then follow the exact workflow:**
 
-| TYPE | Description | Workflow |
-|------|-------------|----------|
-| TYPE A | Period lookup | `find_bulletins_for_period()` → search → answer |
-| TYPE B | Document lookup | `search_bulletin()` → `read_bulletin()` → answer |
-| TYPE C | Table extraction | `extract_tables()` → `extract_column_values()` → answer |
-| TYPE D | Calculation | search → extract → `calculate()` → answer |
-| TYPE E | Trend prediction | search → extract → `linear_regression()` → answer |
-| TYPE F | Broad search | `search_corpus()` → narrow down → specific tool |
+| Question Type | Workflow |
+|--------------|----------|
+| **Lookup** | `search_corpus()` → `read_bulletin()` → `write_answer()` |
+| **Period** | `find_bulletins_for_period()` → `read_bulletin()` → `write_answer()` |
+| **Table** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `write_answer()` |
+| **Calculation** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `calculate()` → `verify()` → `write_answer()` |
+| **Trend** | `search_corpus()` → `read_bulletin()` → `extract_tables()` → `linear_regression()` → `verify()` → `write_answer()` |
 
-**TYPE E triggers:** forecast, project, expected, trend, estimate, future, predict
-**TYPE A triggers:** year, quarter, month, fiscal period → use `find_bulletins_for_period()` first
-
----
-
-## MANDATORY WORKFLOW
-
-**NUMERICAL:** `find_bulletins_for_period() → search_corpus() → read_bulletin() → extract_tables() → calculate() → verify() → write_answer()`
-**NON-NUMERICAL:** `find_bulletins_for_period() → search_corpus() → read_bulletin() → write_answer()`
-
-**⚠️ IF extract_tables() returns nothing:** Try `read_bulletin()` directly, then re-try extract_tables with different keyword.
-**⚠️ IF extract_tables() returns partial data:** Increase `table_context` or use `read_bulletin()` to scan manually.
+**Trigger words:**
+- Trend: forecast, project, expected, trend, estimate, future, predict
+- Period: year, quarter, month, fiscal period
+- Calculation: total, sum, average, percent, geometric mean
 
 ---
 
-## VERIFICATION (REQUIRED for all answers)
+## CRITICAL RULES
 
-Before `write_answer()`, confirm:
-1. **Company/Entity** — Correct data series/fund/department? Cite bulletin filename.
-2. **Period** — Matches exact year/quarter/month?
-3. **Units** — Millions/billions/dollars match question?
-4. **Arithmetic** — Calculation re-run independently? Value count correct?
-5. **Evidence** — Bulletin text supports answer?
-
-**If ANY check fails:** Re-extract and recalculate.
-
----
-
-## EVIDENCE RULES
-
-- **Never answer from `search_corpus()` alone** — always read the bulletin
-- **Never answer after single search** — try alternate terms
-- **Multiple values found?** Continue reading until single value confirmed. If impossible → "insufficient evidence"
-- **Cite source:** Always note which bulletin filename provided the evidence
+1. **Never answer directly from `search_corpus()` results** — always read the bulletin first
+2. **Bulletin evidence must be read before answering**
+3. **If evidence is ambiguous:** continue retrieval, try alternate keywords
+4. **If evidence cannot be verified:** answer "insufficient evidence"
+5. **For calculations:** `extract_tables()` is REQUIRED before `calculate()`
+6. **Tables have "individual" and "cumulative" columns** — use `extract_column_values(table, "individual")`
+7. **Skip "n.a.", "-", blank values** in calculations
+8. **Parentheses = negative:** `(123.4)` = -123.4
 
 ---
 
 ## CALCULATION RULES
 
-- Use `calculate()` for ALL arithmetic — never compute mentally
-- Use `linear_regression()` for trend analysis
-- **Skip "n.a.", "-", and blank values** in calculations
-- **Parentheses = negative:** `(123.4)` means -123.4
-- **Asterisk = revised:** Use the revised value
+- Use `calculate()` for ALL arithmetic — never mentally
+- `calculate()` functions: `sum`, `round`, `geometric_mean`, `percent_change(old,new)`, `box_cox(v,lam)`
+- **Rounding:** sum=1, percent=2, geometric_mean=2, slope=3, intercept=3, box_cox=4
+- `linear_regression(x_values, y_values)` → parse JSON → `calculate("round(..., 3)")`
 
-**Rounding precision by type:**
-| Type | Precision |
-|------|-----------|
-| sum, total | 1 decimal |
-| percent change | 2 decimal |
-| geometric mean | 2 decimal |
-| regression slope | 3 decimal |
-| regression intercept | 3 decimal |
-| box-cox | 4 decimal |
+---
+
+## VERIFICATION (before write_answer)
+
+1. **Company/Entity** — Correct data series?
+2. **Period** — Matches exact year/quarter/month?
+3. **Units** — Millions/billions/dollars match question?
+4. **Arithmetic** — Calculation re-run?
+5. **Evidence** — Bulletin text supports answer?
+
+---
+
+## TIME PERIOD RULES
+
+- Calendar year: Jan–Dec
+- FY pre-1977: Jul–Jun (FY1955 = Jul 1954–Jun 1955)
+- FY post-1977: Oct–Sep (FY1981 = Oct 1980–Sep 1981)
+- Annual totals: Look in Jan/Feb of FOLLOWING year
+- "as reported in [Month YYYY]": Use EXACTLY that bulletin's figures
 
 ---
 
@@ -84,131 +75,23 @@ Before `write_answer()`, confirm:
 
 | Tool | Args | Use |
 |------|------|-----|
-| `list_bulletins()` | — | List bulletins |
 | `find_bulletins_for_period(start, end)` | year range | Filter by date |
 | `search_corpus(keyword, context=20, max=50)` | keyword | Find bulletins |
-| `search_bulletin(filename, keyword)` | file, keyword | Search one file |
-| `read_bulletin(filename, lines=500)` | file, lines | Read content |
-| `extract_tables(filename, keyword, context=100)` | file, keyword | Extract tables (max 3 matches) |
+| `read_bulletin(filename, lines=500)` | file, lines | Read bulletin |
+| `extract_tables(filename, keyword, context=100)` | file, keyword | Extract tables |
 | `extract_column_values(table, header)` | table, header | Get column |
 | `calculate(expression)` | expression | Math eval |
-| `linear_regression(x_values, y_values, decimal_places=6)` | two lists | OLS |
+| `linear_regression(x_values, y_values)` | two lists | OLS regression |
 | `write_answer(answer)` | string | Final answer |
 
-**calculate():** `sum`, `round`, `geometric_mean`, `percent_change(old,new)`, `box_cox(v,lam)`
-
 ---
 
-## Time Period Rules
-
-- **Calendar year:** Jan–Dec
-- **FY pre-1977:** Jul–Jun. Search range = year-1 to year+1 (e.g., FY1955 = Jul 1954–Jun 1955 → search 1954-1956)
-- **FY post-1977:** Oct–Sep. Search range = year-1 to year+1 (e.g., FY1981 = Oct 1980–Sep 1981 → search 1980-1982)
-- **Annual totals:** Look in Jan/Feb bulletin of FOLLOWING year
-- **"as reported in [Month YYYY]":** Use EXACTLY that bulletin's figures, not later revisions
-
----
-
-## Table Rules
-
-**⚠️ CRITICAL: Tables have TWO columns — "individual" and "cumulative".**
-- Use `extract_column_values(table, "individual")` for monthly values
-- **NEVER sum cumulative values** — they are already cumulative!
-- If `extract_tables()` returns only 1-2 matches but data seems incomplete: increase `table_context` or try `read_bulletin()`
-
----
-
-## Task Patterns
-
-### Pattern 1: Calendar Year Total
-1. `find_bulletins_for_period(year-1, year+1)`
-2. `search_corpus()` for entity
-3. **IF individual months:** extract 12 values → `calculate("sum([...])")`
-4. **IF annual total:** use directly (check table header)
-5. Verify: count=12, cite bulletin, check units
-6. `write_answer(value)`
-
-### Pattern 2: Individual Monthly Sum ⚠️
-1. `find_bulletins_for_period(year-1, year+1)`
-2. `extract_tables()` → `extract_column_values("individual")`
-3. Verify: exactly 12 values (count them!)
-4. Skip "n.a." and "-" values
-5. `calculate("sum([m1,m2,...,m12])")`
-6. Verify: re-calculate, cite bulletin filename
-7. `write_answer(value)`
-
-### Pattern 3: Percent Change
-1. `find_bulletins_for_period(year1-1, year2+1)`
-2. Extract values for BOTH years (same data series!)
-3. Verify: both from same table
-4. `calculate("round(percent_change(old=Y1, new=Y2), 2)")`
-5. `write_answer("XX.XX%")`
-
-### Pattern 4: Geometric Mean ⚠️
-1. `find_bulletins_for_period(start-1, end+1)`
-2. Calculate month count: (EndYr-StrYr)×12+(EndMo-StrMo)+1
-3. Extract values from tables
-4. Verify: count matches expected months (critical!)
-5. `calculate("round(geometric_mean([...]), 2)")`
-6. `write_answer("XXXX.XX")`
-
-### Pattern 5: Highest Spending (FY)
-1. **FY search range:** year-1 to year+1
-2. `extract_tables()` for department expenditures
-3. `calculate("max([val1, val2, ...])")`
-4. Verify: department name, cite bulletin
-5. `write_answer(value)` (just the number, no "million")
-
-### Pattern 6: OLS Regression ⚠️
-1. `find_bulletins_for_period(start-1, end+1)`
-2. Collect: x=[years], y=[values]
-3. Verify: equal length, cite bulletin
-4. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
-5. Parse JSON → `calculate("round(slope, 3)")`, `calculate("round(intercept, 3)")`
-6. **Use Unicode minus (−) for negative values**
-7. `write_answer("[s, −i]")` (e.g., `[0.123, −0.234]`)
-
-### Pattern 7: Box-Cox ⚠️
-1. Find bulletin with BOTH FY values (same source!)
-2. Verify: both values from SAME table
-3. `calculate("round(box_cox(v1,lam) - box_cox(v2,lam), 4)")`
-4. `write_answer("X.XXXX")`
-
-### Pattern 8: Multi-Value
-1. `find_bulletins_for_period(year-1, year+2)`
-2. Extract both values from SAME table
-3. Verify: same source
-4. `calculate("round((v1/v2)*100, 2)")`
-5. `write_answer("[dollar, percent%]")`
-
----
-
-## ⚠️ If Data Cannot Be Verified
-- `extract_tables()` returns nothing → Try `read_bulletin()` directly
-- Multiple values → Continue reading until single confirmed
-- Still ambiguous → "insufficient evidence"
-- Never guess
-
----
-
-## Answer Format
+## ANSWER FORMAT
 
 | Type | Format | Example |
 |------|--------|---------|
-| Single number | digits only | `2273.8` |
+| Number | digits only | `2273.8` |
 | Percentage | number + % | `12.34%` |
 | Regression | [s, −i] | `[0.123, −0.234]` |
-| Multi-value | [a, b%] | `[1234567, 12.34%]` |
 
-**Formatting:** Use Unicode minus (−) for negatives. `round()` uses conventional 0.5→up.
-
----
-
-## Self-Check Before write_answer()
-
-- [ ] Correct document retrieved? (cite bulletin filename)
-- [ ] Date range correct (calendar vs fiscal)?
-- [ ] Units correct?
-- [ ] Value count correct?
-- [ ] Calculation verified?
-- [ ] Format correct (%, Unicode minus)?
+**Use Unicode minus (−) for negatives. `round()` uses conventional 0.5→up.**
