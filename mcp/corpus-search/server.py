@@ -59,15 +59,15 @@ def find_bulletins_for_period(start_year: int, end_year: int) -> str:
 
 
 @mcp.tool()
-def search_corpus(keyword: str, context_lines: int = 5, max_results: int = 30) -> str:
+def search_corpus(keyword: str, context_lines: int = 20, max_results: int = 50) -> str:
     """Search ALL Treasury Bulletin files for a keyword with surrounding context.
 
     Use this first to identify which bulletins contain your target data.
 
     Args:
         keyword: Case-insensitive search term, e.g. 'national defense', 'net interest'.
-        context_lines: Lines of context around each match (default 5).
-        max_results: Max matches to return (default 30).
+        context_lines: Lines of context around each match (default 20).
+        max_results: Max matches to return (default 50).
     """
     try:
         result = subprocess.run(
@@ -110,13 +110,13 @@ def search_bulletin(filename: str, keyword: str, context_lines: int = 10) -> str
 
 
 @mcp.tool()
-def read_bulletin(filename: str, start_line: int = 1, end_line: int = 200) -> str:
+def read_bulletin(filename: str, start_line: int = 1, end_line: int = 500) -> str:
     """Read a section of a bulletin file by line range.
 
     Args:
         filename: e.g. 'treasury_bulletin_1941_01.txt'
         start_line: First line (1-indexed, default 1).
-        end_line: Last line (default 200). Increase for large tables.
+        end_line: Last line (default 500). Increase for large tables.
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
@@ -130,7 +130,7 @@ def read_bulletin(filename: str, start_line: int = 1, end_line: int = 200) -> st
 
 
 @mcp.tool()
-def extract_tables(filename: str, keyword: str, table_context: int = 60) -> str:
+def extract_tables(filename: str, keyword: str, table_context: int = 100) -> str:
     """Extract markdown tables near a keyword match in a bulletin file.
 
     Finds up to 3 keyword matches and returns the full surrounding block
@@ -139,7 +139,7 @@ def extract_tables(filename: str, keyword: str, table_context: int = 60) -> str:
     Args:
         filename: e.g. 'treasury_bulletin_1941_01.txt'
         keyword: Keyword to locate the table (case-insensitive).
-        table_context: Lines to scan around the match (default 60).
+        table_context: Lines to scan around the match (default 100).
     """
     filepath = CORPUS_DIR / filename
     if not filepath.exists():
