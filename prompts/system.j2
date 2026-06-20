@@ -513,10 +513,12 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 **Question:** "What were total expenditures for national defense in calendar year 1940?"
 
 **Steps:**
-1. Find bulletins from that year and following year (annual totals appear later)
-2. Search for "national defense" in relevant bulletins
-3. Sum 12 individual monthly values OR use annual total if available
-4. write_answer(value) — no commas, no unit words
+1. Find bulletins from that year and following year: `find_bulletins_for_period(1939, 1941)`
+2. Search for "national defense": `search_corpus("national defense")`
+3. **IF question asks for "individual calendar months":** Extract 12 monthly values → `calculate("sum([...])")`
+4. **IF annual total is available in table:** Use it directly (check table header)
+5. **ALWAYS verify:** Company, period, units, arithmetic, evidence
+6. write_answer(value) — no commas, no unit words
 
 ---
 
@@ -530,11 +532,14 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 - **Cumulative column:** Shows running total (Jan=150, Feb=350, Mar=580)
 
 **Correct approach:**
-1. Identify which column is "individual months" (check header)
-2. Extract ALL 12 monthly values (Jan through Dec)
-3. Verify count: should be exactly 12 values
-4. Sum them with `calculate("sum([m1, m2, ..., m12])")`
-5. NEVER use the cumulative total row
+1. `find_bulletins_for_period(year-1, year+1)` to narrow search
+2. `extract_tables(filename, keyword, table_context=100)`
+3. Identify which column is "individual months" (check header)
+4. Extract ALL 12 monthly values (Jan through Dec)
+5. Verify count: should be exactly 12 values
+6. Sum them with `calculate("sum([m1, m2, ..., m12])")`
+7. **Verify:** Re-calculate independently, confirm bulletin support
+8. NEVER use the cumulative total row
 
 ---
 
@@ -542,9 +547,12 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 **Question:** "What was the absolute percent change between 1953 and 1940?"
 
 **Steps:**
-1. Find annual totals for BOTH years (sum of 12 months each)
-2. Use `calculate("percent_change(old=YEAR1, new=YEAR2)")`
-3. write_answer("X.XX%") — MUST include % symbol
+1. `find_bulletins_for_period(year1-1, year2+1)` for both years
+2. Extract annual totals for BOTH years (sum of 12 months each OR use pre-computed totals)
+3. Verify: Both values from same data series/table
+4. `calculate("percent_change(old=YEAR1, new=YEAR2)")`
+5. **Verify:** Re-run calculation, confirm units match
+6. write_answer("X.XX%") — MUST include % symbol
 
 ---
 
@@ -562,11 +570,13 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
   - Total = 10 + 60 + 10 = 80 months
 
 **Steps:**
-1. Identify the exact date range (verify month count!)
-2. Extract ALL monthly values in that range
-3. Verify count matches expected months
-4. `calculate("round(geometric_mean([v1, v2, ...]), 2)")`
-5. write_answer("XXXX.XX")
+1. `find_bulletins_for_period(start_year-1, end_year+1)` for full range
+2. Identify the exact date range (verify month count!)
+3. Extract ALL monthly values in that range from tables
+4. Verify count matches expected months
+5. `calculate("round(geometric_mean([v1, v2, ...]), 2)")`
+6. **Verify:** Confirm all values from same table/column
+7. write_answer("XXXX.XX")
 
 ---
 
@@ -575,19 +585,19 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 
 **Fiscal Year Conventions:**
 - **Pre-1977:** FY starts Jul 1, ends Jun 30
-- FY1955 = Jul 1954 through Jun 1955
+- FY1955 = Jul 1954 through Jun 1955 → search bulletins **1944-1956** (to capture Jul-Dec 1954 and Jan-Jun 1955)
 - **Post-1977:** FY starts Oct 1, ends Sep 30
 
-**⚠️ Most Common Error:** Confusing fiscal with calendar year
+**⚠️ Most Common Error:** Confusing fiscal with calendar year; wrong year range
 
 **Steps:**
-1. Determine fiscal year dates:
-   - FY1955 ends Jun 1955 → search in Jul 1955 - Dec 1955 bulletins
-   - FY1981 ends Sep 1981 → search in Oct 1981 - Dec 1981 bulletins
+1. Determine FY dates and search range:
+   - FY1955: Jul 1954-Jun 1955 → `find_bulletins_for_period(1944, 1956)`
 2. Search for "expenditures by department" or similar
-3. Extract ALL department values
-4. Find the MAXIMUM value
-5. write_answer(value) — just the number, no unit words
+3. Extract ALL department values from table
+4. Use `calculate("max([val1, val2, ...])")` to find maximum
+5. **Verify:** Confirm department name matches, check units
+6. write_answer(value) — just the number, no unit words
 
 ---
 
@@ -597,13 +607,15 @@ Tables often show BOTH individual months AND cumulative totals in adjacent colum
 **⚠️ Most Common Error:** Using `-` instead of `−` (U+2212) for negative intercept
 
 **Steps:**
-1. Collect data points: x=[years], y=[values]
-2. Verify equal length (e.g., 14 years = 14 values)
-3. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
-4. Parse JSON result: `{"slope": ..., "intercept": ...}`
-5. Round with `calculate("round(value, 3)")`
-6. **Use Unicode minus `−` (U+2212) for negative numbers in the answer string**
-7. write_answer("[slope, −intercept]")
+1. `find_bulletins_for_period(start_year-1, end_year+1)` for data range
+2. Collect data points: x=[years], y=[values]
+3. Verify equal length (e.g., 14 years = 14 values)
+4. `linear_regression(x_values=[...], y_values=[...], decimal_places=6)`
+5. Parse JSON result: `{"slope": ..., "intercept": ...}`
+6. Round with `calculate("round(slope, 3)")` and `calculate("round(intercept, 3)")`
+7. **Verify:** Confirm values are reasonable, check bulletin evidence
+8. **Use Unicode minus `−` (U+2212) for negative numbers in the answer string**
+9. write_answer("[slope, −intercept]")
 
 ---
 
@@ -616,12 +628,16 @@ BoxCox(value, λ) = (value^λ - 1) / λ   when λ ≠ 0
 BoxCox(value, 0) = ln(value)            when λ = 0
 ```
 
-**⚠️ Most Common Error:** Wrong formula or wrong values from different bulletins
+**⚠️ Most Common Error:** Using values from different bulletins
+
+**⚠️ CRITICAL:** Both fiscal year values MUST come from the SAME bulletin. Do NOT mix sources.
 
 **Steps:**
-1. Get BOTH values from SAME bulletin (e.g., Nov 1981 for FY1981 and FY1980)
-2. `calculate("round(box_cox(value=FY1981, lam=0.75) - box_cox(value=FY1980, lam=0.75), 4)")`
-3. write_answer("X.XXXX")
+1. Find the bulletin that contains BOTH FY values (typically late in the fiscal year)
+2. Extract FY1981 and FY1980 values from SAME table in SAME bulletin
+3. **Verify:** Confirm both values are from same source before proceeding
+4. `calculate("round(box_cox(value=FY1981, lam=0.75) - box_cox(value=FY1980, lam=0.75), 4)")`
+5. write_answer("X.XXXX")
 
 ---
 
@@ -629,11 +645,20 @@ BoxCox(value, 0) = ln(value)            when λ = 0
 **Question:** "Total dollar value AND percent of noncash rollover tenders for 2-year notes maturing July 1984"
 
 **Steps:**
-1. Find auction data for the specific security (2-year, July 1984 maturity)
-2. Extract total bids submitted (in dollars)
-3. Extract noncash rollover tenders accepted for non-domestic investors
-4. Calculate percent: `(noncash_rollover_non_domestic / total_bids) * 100`
-5. write_answer("[dollar_value, percent%]") — dollar value rounded to nearest dollar, percent with %
+1. `find_bulletins_for_period(year-1, year+2)` for the maturity year
+2. Find auction data for the specific security (2-year, July 1984 maturity)
+3. Extract total bids submitted (in dollars)
+4. Extract noncash rollover tenders accepted for non-domestic investors
+5. **Verify:** Confirm both values from same table/source
+6. Calculate percent: `calculate("(noncash / total) * 100")`
+7. write_answer("[dollar_value, percent%]") — dollar value rounded to nearest dollar, percent with %
+
+---
+
+### ⚠️ If Data Cannot Be Verified
+- Multiple conflicting values found → Continue reading bulletins
+- Still ambiguous after thorough search → "insufficient evidence"
+- Never guess when evidence is insufficient
 
 ---
 
